@@ -17,11 +17,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 공개 API (POST /api/inquiries만 허용)
-  if (
-    pathname === "/api/inquiries" &&
-    request.method === "POST"
-  ) {
+  // 공개 API 경로
+  if (PUBLIC_API_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
