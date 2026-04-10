@@ -6,7 +6,8 @@ async function getData() {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const startDate = `${year}-${month}-01`;
-  const endDate = `${year}-${month}-31`;
+  const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+  const endDate = `${year}-${month}-${String(lastDay).padStart(2, "0")}`;
 
   const [lessons, classes] = await Promise.all([
     sql`
