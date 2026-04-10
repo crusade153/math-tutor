@@ -15,7 +15,7 @@ export async function GET(
   const studentId = parseInt(id);
 
   const rows = await sql`
-    SELECT s.*, u.name AS parent_name, u.email AS parent_email
+    SELECT s.*, u.name AS parent_name, u.username AS parent_email
     FROM students s
     LEFT JOIN users u ON u.id = s.parent_id
     WHERE s.id = ${studentId} AND s.deleted_at IS NULL

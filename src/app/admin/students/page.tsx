@@ -3,7 +3,7 @@ import StudentsClient from "./StudentsClient";
 
 async function getStudents() {
   return sql`
-    SELECT s.*, u.name AS parent_name, u.email AS parent_email, u.phone AS parent_phone
+    SELECT s.*, u.name AS parent_name, u.username AS parent_email, u.phone AS parent_phone
     FROM students s
     LEFT JOIN users u ON u.id = s.parent_id
     WHERE s.deleted_at IS NULL

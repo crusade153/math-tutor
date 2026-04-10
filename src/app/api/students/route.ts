@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
   if (session.role === "admin") {
     const rows = await sql`
-      SELECT s.*, u.name AS parent_name, u.email AS parent_email,
+      SELECT s.*, u.name AS parent_name, u.username AS parent_email,
              u.phone AS parent_phone
       FROM students s
       LEFT JOIN users u ON u.id = s.parent_id
