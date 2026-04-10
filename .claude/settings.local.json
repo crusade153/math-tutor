@@ -3,7 +3,12 @@
     "allow": [
       "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-git --yes)",
       "Bash(npm install:*)",
-      "Bash(npx shadcn@latest init --yes --defaults)"
+      "Bash(npx shadcn@latest init --yes --defaults)",
+      "Bash(npx shadcn@latest add input label card dialog table badge avatar skeleton tabs alert select textarea --yes)",
+      "Bash(npx shadcn@latest add dropdown-menu toast --yes)",
+      "Bash(npx shadcn@latest add dropdown-menu sonner --yes)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)"
     ]
   }
 }
