@@ -1,29 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import { verifyPassword, signToken, setAuthCookie } from "@/lib/auth";
+import { signToken, setAuthCookie } from "@/lib/auth";
 import type { User } from "@/types";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password } = body;
+    const { username, password } = body;
 
-    if (!email || !password) {
+    if (!username || !password) {
       return NextResponse.json(
-        { error: "이메일과 비밀번호를 입력해주세요." },
+        { error: "아이디와 비밀번호를 입력해주세요." },
         { status: 400 }
       );
     }
 
     const rows = await sql`
-      SELECT id, email, password_hash, name, role, must_change_pw, is_active
+      SELECT id, username, password, name, role, must_change_pw, is_active
       FROM users
-      WHERE email = ${email} AND deleted_at IS NULL
+      WHERE username = ${username} AND deleted_at IS NULL
     `;
 
     if (rows.length === 0) {
       return NextResponse.json(
-        { error: "이메일 또는 비밀번호가 올바르지 않습니다." },
+        { error: "아이디 또는 비밀번호가 올바르지 않습니다." },
         { status: 401 }
       );
     }
@@ -37,17 +37,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const isValid = await verifyPassword(password, user.password_hash);
-    if (!isValid) {
+    if (password !== user.password) {
       return NextResponse.json(
-        { error: "이메일 또는 비밀번호가 올바르지 않습니다." },
+        { error: "아이디 또는 비밀번호가 올바르지 않습니다." },
         { status: 401 }
       );
     }
 
     const token = await signToken({
       userId: user.id,
-      email: user.email,
+      username: user.username,
       name: user.name,
       role: user.role,
       mustChangePw: user.must_change_pw,

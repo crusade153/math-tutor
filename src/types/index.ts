@@ -4,7 +4,7 @@ export type Role = "admin" | "parent";
 // JWT 페이로드
 export interface JWTPayload {
   userId: number;
-  email: string;
+  username: string;
   name: string;
   role: Role;
   mustChangePw: boolean;
@@ -13,8 +13,8 @@ export interface JWTPayload {
 // DB 행 타입
 export interface User {
   id: number;
-  email: string;
-  password_hash: string;
+  username: string;
+  password: string;
   name: string;
   role: Role;
   phone: string | null;

@@ -1,5 +1,4 @@
 import { neon } from "@neondatabase/serverless";
-import bcrypt from "bcryptjs";
 import * as path from "path";
 import * as dotenv from "dotenv";
 
@@ -12,29 +11,25 @@ if (!DATABASE_URL) {
 
 const sql = neon(DATABASE_URL);
 
-const ADMIN_EMAIL = "admin@math-tutor.com";
-const ADMIN_PASSWORD = "changeme123!";
+const ADMIN_USERNAME = "admin";
+const ADMIN_PASSWORD = "12345678";
 const ADMIN_NAME = "선생님";
 
 async function seed() {
-  // 이미 admin이 존재하면 건너뜀
-  const existing = await sql`SELECT id FROM users WHERE email = ${ADMIN_EMAIL}`;
+  const existing = await sql`SELECT id FROM users WHERE username = ${ADMIN_USERNAME}`;
   if (existing.length > 0) {
     console.log("ℹ️  Admin 계정이 이미 존재합니다.");
     return;
   }
 
-  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
-
   await sql`
-    INSERT INTO users (email, password_hash, name, role, must_change_pw)
-    VALUES (${ADMIN_EMAIL}, ${passwordHash}, ${ADMIN_NAME}, 'admin', true)
+    INSERT INTO users (username, password, name, role, must_change_pw)
+    VALUES (${ADMIN_USERNAME}, ${ADMIN_PASSWORD}, ${ADMIN_NAME}, 'admin', false)
   `;
 
   console.log("✅ Admin 계정 생성 완료");
-  console.log(`   이메일: ${ADMIN_EMAIL}`);
+  console.log(`   아이디: ${ADMIN_USERNAME}`);
   console.log(`   비밀번호: ${ADMIN_PASSWORD}`);
-  console.log("   ⚠️  첫 로그인 후 반드시 비밀번호를 변경하세요!");
 }
 
 seed().catch((err) => {

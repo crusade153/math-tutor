@@ -1,5 +1,4 @@
 import { neon } from "@neondatabase/serverless";
-import bcrypt from "bcryptjs";
 import * as path from "path";
 import * as dotenv from "dotenv";
 
@@ -12,26 +11,22 @@ if (!DATABASE_URL) {
 
 const sql = neon(DATABASE_URL);
 
-const ADMIN_EMAIL = "admin@math-tutor.com";
-const NEW_PASSWORD = "changeme123!";
-
 async function resetAdmin() {
-  const passwordHash = await bcrypt.hash(NEW_PASSWORD, 12);
-
   const result = await sql`
     UPDATE users
-    SET password_hash = ${passwordHash},
-        must_change_pw = true
-    WHERE email = ${ADMIN_EMAIL} AND role = 'admin'
-    RETURNING id
+    SET username = 'admin',
+        password = '12345678',
+        must_change_pw = false
+    WHERE role = 'admin'
+    RETURNING id, username
   `;
 
   if (result.length === 0) {
     console.log("❌ admin 계정을 찾을 수 없습니다.");
   } else {
     console.log("✅ 비밀번호 초기화 완료!");
-    console.log(`   이메일: ${ADMIN_EMAIL}`);
-    console.log(`   비밀번호: ${NEW_PASSWORD}`);
+    console.log("   아이디: admin");
+    console.log("   비밀번호: 12345678");
   }
 }
 

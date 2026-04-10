@@ -1,4 +1,3 @@
-import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
@@ -9,17 +8,6 @@ const JWT_SECRET = new TextEncoder().encode(
 );
 const COOKIE_NAME = "auth_token";
 const TOKEN_MAX_AGE = 60 * 60 * 24 * 7; // 7일
-
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12);
-}
-
-export async function verifyPassword(
-  password: string,
-  hash: string
-): Promise<boolean> {
-  return bcrypt.compare(password, hash);
-}
 
 export async function signToken(payload: JWTPayload): Promise<string> {
   return new SignJWT({ ...payload })

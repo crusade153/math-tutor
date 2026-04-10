@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import { getSessionFromRequest, hashPassword } from "@/lib/auth";
-import { generateTempPassword } from "@/lib/utils";
+import { getSessionFromRequest } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   const session = await getSessionFromRequest(request);
@@ -10,7 +9,7 @@ export async function GET(request: NextRequest) {
   }
 
   const rows = await sql`
-    SELECT u.id, u.email, u.name, u.phone, u.is_active, u.created_at,
+    SELECT u.id, u.username, u.name, u.phone, u.is_active, u.created_at,
            json_agg(
              json_build_object('id', s.id, 'name', s.name, 'grade', s.grade)
              ORDER BY s.name
@@ -33,34 +32,33 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, email, phone } = body;
+    const { name, username, phone, password } = body;
 
-    if (!name || !email) {
+    if (!name || !username) {
       return NextResponse.json(
-        { error: "이름과 이메일은 필수입니다." },
+        { error: "이름과 아이디는 필수입니다." },
         { status: 400 }
       );
     }
 
-    const existing = await sql`SELECT id FROM users WHERE email = ${email}`;
+    const existing = await sql`SELECT id FROM users WHERE username = ${username}`;
     if (existing.length > 0) {
       return NextResponse.json(
-        { error: "이미 사용 중인 이메일입니다." },
+        { error: "이미 사용 중인 아이디입니다." },
         { status: 409 }
       );
     }
 
-    const tempPassword = generateTempPassword();
-    const passwordHash = await hashPassword(tempPassword);
+    const finalPassword = password || "1234";
 
     const rows = await sql`
-      INSERT INTO users (email, password_hash, name, role, phone, must_change_pw)
-      VALUES (${email}, ${passwordHash}, ${name}, 'parent', ${phone ?? null}, true)
-      RETURNING id, email, name, phone, created_at
+      INSERT INTO users (username, password, name, role, phone, must_change_pw)
+      VALUES (${username}, ${finalPassword}, ${name}, 'parent', ${phone ?? null}, false)
+      RETURNING id, username, name, phone, created_at
     `;
 
     return NextResponse.json(
-      { data: { ...rows[0], tempPassword } },
+      { data: { ...rows[0], password: finalPassword } },
       { status: 201 }
     );
   } catch (err) {

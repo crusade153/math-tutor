@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import {
-  getSessionFromRequest,
-  verifyPassword,
-  hashPassword,
-  signToken,
-  setAuthCookie,
-} from "@/lib/auth";
+import { getSessionFromRequest, signToken, setAuthCookie } from "@/lib/auth";
 import type { User } from "@/types";
 
 export async function POST(request: NextRequest) {
@@ -26,15 +20,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (newPassword.length < 8) {
+    if (newPassword.length < 4) {
       return NextResponse.json(
-        { error: "새 비밀번호는 8자 이상이어야 합니다." },
+        { error: "새 비밀번호는 4자 이상이어야 합니다." },
         { status: 400 }
       );
     }
 
     const rows = await sql`
-      SELECT id, password_hash FROM users WHERE id = ${session.userId}
+      SELECT id, password FROM users WHERE id = ${session.userId}
     `;
 
     if (rows.length === 0) {
@@ -44,25 +38,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = rows[0] as Pick<User, "id" | "password_hash">;
-    const isValid = await verifyPassword(currentPassword, user.password_hash);
+    const user = rows[0] as Pick<User, "id" | "password">;
 
-    if (!isValid) {
+    if (currentPassword !== user.password) {
       return NextResponse.json(
         { error: "현재 비밀번호가 올바르지 않습니다." },
         { status: 400 }
       );
     }
 
-    const newHash = await hashPassword(newPassword);
-
     await sql`
       UPDATE users
-      SET password_hash = ${newHash}, must_change_pw = false
+      SET password = ${newPassword}, must_change_pw = false
       WHERE id = ${session.userId}
     `;
 
-    // 새 JWT 발급 (mustChangePw = false)
     const newToken = await signToken({
       ...session,
       mustChangePw: false,

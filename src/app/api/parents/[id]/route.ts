@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import { getSessionFromRequest, hashPassword } from "@/lib/auth";
-import { generateTempPassword } from "@/lib/utils";
+import { getSessionFromRequest } from "@/lib/auth";
 
 export async function GET(
   request: NextRequest,
@@ -14,7 +13,7 @@ export async function GET(
 
   const { id } = await params;
   const rows = await sql`
-    SELECT u.id, u.email, u.name, u.phone, u.is_active,
+    SELECT u.id, u.username, u.password, u.name, u.phone, u.is_active,
            json_agg(
              json_build_object('id', s.id, 'name', s.name, 'grade', s.grade, 'school', s.school)
              ORDER BY s.name
@@ -43,16 +42,14 @@ export async function PUT(
 
   const { id } = await params;
   const body = await request.json();
-  const { name, phone, is_active, resetPassword } = body;
+  const { name, phone, is_active, password } = body;
 
-  if (resetPassword) {
-    const tempPassword = generateTempPassword();
-    const passwordHash = await hashPassword(tempPassword);
+  if (password !== undefined) {
     await sql`
-      UPDATE users SET password_hash = ${passwordHash}, must_change_pw = true
+      UPDATE users SET password = ${password}, must_change_pw = false
       WHERE id = ${parseInt(id)}
     `;
-    return NextResponse.json({ data: { tempPassword } });
+    return NextResponse.json({ data: { ok: true } });
   }
 
   await sql`
