@@ -10,7 +10,8 @@
       "Bash(npx tsc:*)",
       "Bash(npm run:*)",
       "Bash(del \"C:\\\\Users\\\\User\\\\Desktop\\\\chang\\\\src\\\\app\\\\api\\\\dev\\\\reset-admin\\\\route.ts\")",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

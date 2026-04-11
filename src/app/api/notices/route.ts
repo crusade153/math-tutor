@@ -29,19 +29,21 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { title, content, is_published } = body;
+    const { title, content, isPublished, target, targetId } = body;
 
     if (!title || !content) {
       return NextResponse.json({ error: "제목과 내용을 입력해주세요." }, { status: 400 });
     }
 
     const rows = await sql`
-      INSERT INTO notices (title, content, is_published, published_at)
+      INSERT INTO notices (title, content, target, target_id, is_published, published_at)
       VALUES (
         ${title},
         ${content},
-        ${is_published ?? false},
-        ${is_published ? new Date().toISOString() : null}
+        ${target ?? "all"},
+        ${targetId ?? null},
+        ${isPublished ?? false},
+        ${isPublished ? new Date().toISOString() : null}
       )
       RETURNING *
     `;

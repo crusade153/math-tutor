@@ -13,17 +13,21 @@ export async function PUT(
 
   const { id } = await params;
   const body = await request.json();
-  const { title, content, is_published } = body;
+  const { title, content, isPublished, target, targetId } = body;
 
   const publishedAt =
-    is_published === true ? new Date().toISOString() : null;
+    isPublished === true ? new Date().toISOString() : null;
 
   await sql`
     UPDATE notices
     SET title = COALESCE(${title ?? null}, title),
         content = COALESCE(${content ?? null}, content),
-        is_published = COALESCE(${is_published ?? null}, is_published),
-        published_at = CASE WHEN ${is_published ?? null} = true AND published_at IS NULL
+        target = COALESCE(${target ?? null}, target),
+        target_id = CASE WHEN ${target ?? null} = 'all' THEN NULL
+                         WHEN ${targetId ?? null} IS NOT NULL THEN ${targetId ?? null}
+                         ELSE target_id END,
+        is_published = COALESCE(${isPublished ?? null}, is_published),
+        published_at = CASE WHEN ${isPublished ?? null} = true AND published_at IS NULL
                             THEN ${publishedAt}
                             ELSE published_at END,
         updated_at = NOW()
