@@ -3,8 +3,8 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
-  title: "수학 과외",
-  description: "수학 전문 과외 선생님 웹사이트",
+  title: "수학 공부방",
+  description: "소수정예 수학 전문 공부방 · 학부모 모니터링 서비스",
 };
 
 export default function RootLayout({

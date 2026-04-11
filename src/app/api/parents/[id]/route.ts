@@ -62,3 +62,22 @@ export async function PUT(
 
   return NextResponse.json({ data: { ok: true } });
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getSessionFromRequest(request);
+  if (!session || session.role !== "admin") {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  }
+
+  const { id } = await params;
+  await sql`
+    UPDATE users
+    SET deleted_at = NOW()
+    WHERE id = ${parseInt(id)} AND role = 'parent'
+  `;
+
+  return NextResponse.json({ data: { ok: true } });
+}

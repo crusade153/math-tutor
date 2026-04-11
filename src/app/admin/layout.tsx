@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import AdminSidebar from "@/components/admin/Sidebar";
+import AdminLayoutClient from "@/components/admin/AdminLayoutClient";
 
 export default async function AdminLayout({
   children,
@@ -11,12 +11,5 @@ export default async function AdminLayout({
   if (!session) redirect("/login");
   if (session.role !== "admin") redirect("/parent/dashboard");
 
-  return (
-    <div className="flex min-h-screen bg-gray-50">
-      <AdminSidebar />
-      <main className="flex-1 overflow-auto">
-        <div className="p-6 max-w-7xl mx-auto">{children}</div>
-      </main>
-    </div>
-  );
+  return <AdminLayoutClient>{children}</AdminLayoutClient>;
 }
