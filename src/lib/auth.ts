@@ -34,6 +34,11 @@ export async function getSession(): Promise<JWTPayload | null> {
   return verifyToken(token);
 }
 
+// 💡 추가된 부분: API 라우트에서 에러가 났던 getAuthUser를 getSession과 연결하여 해결합니다.
+export async function getAuthUser(): Promise<JWTPayload | null> {
+  return getSession();
+}
+
 // 미들웨어에서 사용: request에서 토큰 추출 후 검증
 export async function getSessionFromRequest(
   request: NextRequest

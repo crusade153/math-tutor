@@ -31,7 +31,8 @@ const navItems = [
   { href: "/admin/consultations", icon: MessageCircle, label: "면담 관리" },
   { href: "/admin/tuition", icon: CreditCard, label: "수업료" },
   { href: "/admin/notices", icon: Bell, label: "알림장" },
-  { href: "/admin/inquiries", icon: MessageSquare, label: "상담 문의" },
+  { href: "/admin/inquiries", icon: MessageSquare, label: "신규 상담 문의" }, // 기존
+  { href: "/admin/parent-inquiries", icon: MessageSquare, label: "학부모 문의 관리" }, // 새로 추가된 메뉴
 ];
 
 interface AdminSidebarProps {

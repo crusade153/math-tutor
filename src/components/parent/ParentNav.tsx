@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, ClipboardCheck, MessageCircle, Bell, LogOut } from "lucide-react";
+import { LayoutDashboard, ClipboardCheck, MessageCircle, Bell, LogOut, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { href: "/parent/attendance", icon: ClipboardCheck, label: "출결" },
   { href: "/parent/consultations", icon: MessageCircle, label: "면담" },
   { href: "/parent/notices", icon: Bell, label: "알림장" },
+  { href: "/parent/inquiries", icon: MessageSquare, label: "1:1 문의" }, // 새로 추가된 메뉴
 ];
 
 interface ParentNavProps {
@@ -51,7 +52,8 @@ export default function ParentNav({ userName }: ParentNavProps) {
         <nav className="flex-1 py-4">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            // 하위 경로 처리 (예: /parent/inquiries/1 등)
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
                 key={item.href}
@@ -83,11 +85,12 @@ export default function ParentNav({ userName }: ParentNavProps) {
       </aside>
 
       {/* 모바일 하단 탭 네비게이션 */}
+      {/* 아이템이 1개 늘어나서 grid-cols-6으로 변경했습니다 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t md:hidden z-10 safe-area-inset-bottom">
-        <div className="grid grid-cols-5 max-w-lg mx-auto">
+        <div className="grid grid-cols-6 max-w-lg mx-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
                 key={item.href}
@@ -98,7 +101,7 @@ export default function ParentNav({ userName }: ParentNavProps) {
                 )}
               >
                 <Icon size={20} />
-                {item.label}
+                <span className="truncate w-full text-center px-1">{item.label}</span>
               </Link>
             );
           })}
