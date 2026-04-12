@@ -6,99 +6,158 @@ const LOCATION = {
   phone: "010-0000-0000",
   hours: "평일 14:00 ~ 21:00 · 토요일 10:00 ~ 18:00",
   naverMapUrl: "https://naver.me/FriKXukE",
-  // 네이버 지도 임베드 URL (선택사항: 네이버 지도 API 사용 시 활성화)
-  // embedUrl: "https://map.naver.com/v5/?c=...",
 };
+
+const amenities = [
+  { icon: "🅿️", text: "주차 가능" },
+  { icon: "🚇", text: "대중교통 접근 편리" },
+  { icon: "📷", text: "CCTV 설치" },
+  { icon: "❄️", text: "냉난방 완비" },
+];
 
 export default function LocationSection() {
   return (
-    <section className="py-20 px-4 bg-gray-50">
-      <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-14">
-          <p className="text-indigo-600 text-sm font-semibold tracking-widest uppercase mb-3">
+    <section className="py-24 px-4 bg-white relative overflow-hidden">
+      {/* 배경 장식 */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-5"
+          style={{ background: "radial-gradient(circle, #1E90FF, transparent)" }}
+        />
+      </div>
+
+      <div className="max-w-5xl mx-auto relative">
+        {/* 섹션 헤더 */}
+        <div className="text-center mb-16">
+          <span
+            className="inline-block px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mb-4"
+            style={{ background: "#EBF5FF", color: "#1E90FF" }}
+          >
             LOCATION
+          </span>
+          <h2 className="text-3xl md:text-4xl font-black mb-4" style={{ color: "#222222" }}>
+            오시는 <span style={{ color: "#1E90FF" }}>길</span>
+          </h2>
+          <p className="text-base" style={{ color: "#9E9E9E" }}>
+            안전하고 깨끗한 전용 공부방 공간에서 수업합니다
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">오시는 길</h2>
-          <p className="text-gray-500">안전하고 깨끗한 전용 공부방 공간에서 수업합니다</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* 지도 영역 */}
-          <div className="relative rounded-3xl overflow-hidden shadow-lg bg-white border border-gray-100 aspect-[4/3]">
-            {/* 네이버 지도 임베드 - 실제 사용 시 아래 iframe의 src를 네이버 지도 공유 URL로 변경하세요 */}
+          <div
+            className="relative rounded-3xl overflow-hidden aspect-[4/3]"
+            style={{ boxShadow: "0 4px 24px rgba(30,144,255,0.15)", border: "2px solid #EBF5FF" }}
+          >
             <iframe
-              src={`https://map.naver.com/v5/search/${encodeURIComponent(LOCATION.address)}`}
+              src={`https://maps.google.com/maps?q=${encodeURIComponent(LOCATION.address)}&output=embed&hl=ko&z=16`}
               className="w-full h-full"
               title="공부방 위치"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
             />
-            {/* iframe이 로드되지 않을 경우 보여지는 배경 */}
-            <div className="absolute inset-0 -z-10 bg-gradient-to-br from-indigo-50 to-purple-50 flex flex-col items-center justify-center gap-4">
+            <div
+              className="absolute inset-0 -z-10 flex flex-col items-center justify-center gap-4"
+              style={{ background: "linear-gradient(135deg, #EBF5FF, #E8F9EF)" }}
+            >
               <div className="text-6xl">🗺️</div>
-              <p className="text-gray-400 text-sm">지도를 불러오는 중...</p>
+              <p className="text-sm" style={{ color: "#9E9E9E" }}>지도를 불러오는 중...</p>
             </div>
           </div>
 
           {/* 위치 정보 */}
-          <div className="space-y-5">
+          <div className="space-y-4">
             {/* 주소 카드 */}
-            <div className="p-6 rounded-2xl bg-white border border-gray-100 shadow-sm">
-              <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                <span className="text-2xl">📍</span>
+            <div
+              className="p-6 rounded-2xl bg-white"
+              style={{
+                border: "1.5px solid #EEF4FF",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+              }}
+            >
+              <h3
+                className="font-bold text-lg mb-5 flex items-center gap-2"
+                style={{ color: "#222222" }}
+              >
+                <span
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-xl"
+                  style={{ background: "#EBF5FF" }}
+                >
+                  📍
+                </span>
                 {LOCATION.name}
               </h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-start gap-3">
-                  <span className="text-gray-400 shrink-0 mt-0.5">주소</span>
+              <div className="space-y-4 text-sm">
+                <div className="flex items-start gap-4">
+                  <span
+                    className="shrink-0 px-2 py-0.5 rounded text-xs font-bold mt-0.5"
+                    style={{ background: "#F5F5F5", color: "#9E9E9E" }}
+                  >
+                    주소
+                  </span>
                   <div>
-                    <p className="text-gray-800 font-medium">{LOCATION.address}</p>
-                    {LOCATION.detail && <p className="text-gray-500">{LOCATION.detail}</p>}
+                    <p className="font-semibold" style={{ color: "#222222" }}>{LOCATION.address}</p>
+                    {LOCATION.detail && <p style={{ color: "#9E9E9E" }}>{LOCATION.detail}</p>}
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-gray-400 shrink-0">전화</span>
+                <div className="flex items-center gap-4">
+                  <span
+                    className="shrink-0 px-2 py-0.5 rounded text-xs font-bold"
+                    style={{ background: "#F5F5F5", color: "#9E9E9E" }}
+                  >
+                    전화
+                  </span>
                   <a
                     href={`tel:${LOCATION.phone.replace(/-/g, "")}`}
-                    className="text-indigo-600 font-medium hover:underline"
+                    className="font-bold hover:underline"
+                    style={{ color: "#1E90FF" }}
                   >
                     {LOCATION.phone}
                   </a>
                 </div>
-                <div className="flex items-start gap-3">
-                  <span className="text-gray-400 shrink-0 mt-0.5">운영</span>
-                  <p className="text-gray-700">{LOCATION.hours}</p>
+                <div className="flex items-start gap-4">
+                  <span
+                    className="shrink-0 px-2 py-0.5 rounded text-xs font-bold mt-0.5"
+                    style={{ background: "#F5F5F5", color: "#9E9E9E" }}
+                  >
+                    운영
+                  </span>
+                  <p style={{ color: "#444444" }}>{LOCATION.hours}</p>
                 </div>
               </div>
             </div>
 
-            {/* 특징 */}
+            {/* 편의 시설 */}
             <div className="grid grid-cols-2 gap-3">
-              {[
-                { icon: "🅿️", text: "주차 가능" },
-                { icon: "🚇", text: "지하철 도보 5분" },
-                { icon: "📷", text: "CCTV 설치" },
-                { icon: "❄️", text: "냉난방 완비" },
-              ].map((item) => (
+              {amenities.map((item) => (
                 <div
                   key={item.text}
-                  className="flex items-center gap-2 p-3 rounded-xl bg-indigo-50 text-sm text-gray-700"
+                  className="flex items-center gap-3 p-3.5 rounded-xl text-sm font-medium transition-all duration-200 hover:-translate-y-0.5"
+                  style={{
+                    background: "#EBF5FF",
+                    color: "#0050CC",
+                  }}
                 >
-                  <span>{item.icon}</span>
-                  <span className="font-medium">{item.text}</span>
+                  <span className="text-xl">{item.icon}</span>
+                  <span>{item.text}</span>
                 </div>
               ))}
             </div>
 
-            {/* 네이버 지도 링크 버튼 */}
+            {/* 네이버 지도 버튼 */}
             <a
               href={LOCATION.naverMapUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-base shadow-lg shadow-green-500/30 hover:shadow-green-500/50 hover:-translate-y-0.5 transition-all duration-300"
+              className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl font-extrabold text-base text-white transition-all duration-200 hover:-translate-y-0.5 hover:opacity-90"
+              style={{
+                background: "linear-gradient(135deg, #00C853, #00E676)",
+                boxShadow: "0 4px 20px rgba(0,200,83,0.35)",
+              }}
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
               </svg>
               네이버 지도에서 보기
             </a>

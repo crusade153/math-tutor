@@ -46,36 +46,62 @@ export default function ConsultationForm() {
   return (
     <section
       id="consultation"
-      className="py-20 px-4 bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600 relative overflow-hidden"
+      className="relative pt-10 pb-20 px-4 overflow-hidden"
+      style={{ background: "linear-gradient(135deg, #1E90FF 0%, #0BC76A 100%)" }}
     >
       {/* 배경 장식 */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-purple-500/20 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-indigo-500/20 blur-3xl" />
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div
+          className="absolute -top-32 -right-32 w-80 h-80 rounded-full opacity-15"
+          style={{ background: "radial-gradient(circle, #FFFFFF, transparent)" }}
+        />
+        <div
+          className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full opacity-10"
+          style={{ background: "radial-gradient(circle, #FFD600, transparent)" }}
+        />
+        <div className="absolute top-16 left-8 text-white/[0.05] text-8xl font-black select-none">✏️</div>
       </div>
 
       <div className="relative max-w-2xl mx-auto">
+        {/* 섹션 헤더 */}
         <div className="text-center mb-10">
-          <p className="text-amber-400 text-sm font-semibold tracking-widest uppercase mb-3">
+          <span
+            className="inline-block px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mb-4"
+            style={{ background: "rgba(255,255,255,0.2)", color: "#FFD600" }}
+          >
             FREE CONSULTATION
-          </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">무료 상담 신청</h2>
-          <p className="text-white/60">
+          </span>
+          <h2 className="text-3xl md:text-4xl font-black text-white mb-3">
+            무료 상담 신청
+          </h2>
+          <p className="text-white/70 text-base">
             연락처를 남겨주시면 24시간 내에 빠르게 연락드리겠습니다.
           </p>
         </div>
 
         {submitted ? (
-          <div className="p-10 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 text-center">
+          /* 완료 화면 */
+          <div
+            className="p-10 rounded-3xl text-center"
+            style={{
+              background: "rgba(255,255,255,0.15)",
+              border: "1px solid rgba(255,255,255,0.3)",
+              backdropFilter: "blur(12px)",
+            }}
+          >
             <div className="text-6xl mb-5">✅</div>
-            <h3 className="text-2xl font-bold text-white mb-3">
+            <h3 className="text-2xl font-black text-white mb-3">
               상담 신청이 완료되었습니다!
             </h3>
-            <p className="text-white/60 mb-6">
+            <p className="text-white/65 mb-6">
               빠른 시일 내에 연락드리겠습니다.
             </p>
             <button
-              className="px-6 py-3 rounded-xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all"
+              className="px-6 py-3 rounded-xl font-bold text-white transition-all hover:bg-white/20"
+              style={{
+                background: "rgba(255,255,255,0.15)",
+                border: "1px solid rgba(255,255,255,0.25)",
+              }}
               onClick={() => {
                 setSubmitted(false);
                 setForm({ name: "", phone: "", grade: "", message: "" });
@@ -85,40 +111,46 @@ export default function ConsultationForm() {
             </button>
           </div>
         ) : (
+          /* 폼 */
           <form
             onSubmit={handleSubmit}
-            className="p-6 md:p-8 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 space-y-5"
+            className="p-6 md:p-8 rounded-3xl space-y-5"
+            style={{
+              background: "rgba(255,255,255,0.14)",
+              border: "1px solid rgba(255,255,255,0.28)",
+              backdropFilter: "blur(12px)",
+            }}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-white/80 text-sm">이름 *</Label>
+                <Label className="text-white/85 text-sm font-semibold">이름 *</Label>
                 <Input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="학부모님 성함"
                   required
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-amber-400 focus:ring-amber-400/20"
+                  className="bg-white/10 border-white/25 text-white placeholder:text-white/35 focus:border-white/60 focus:bg-white/15"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-white/80 text-sm">연락처 *</Label>
+                <Label className="text-white/85 text-sm font-semibold">연락처 *</Label>
                 <Input
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   placeholder="010-0000-0000"
                   required
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-amber-400 focus:ring-amber-400/20"
+                  className="bg-white/10 border-white/25 text-white placeholder:text-white/35 focus:border-white/60 focus:bg-white/15"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-white/80 text-sm">자녀 학년</Label>
+              <Label className="text-white/85 text-sm font-semibold">자녀 학년</Label>
               <Select
                 value={form.grade}
                 onValueChange={(v) => v !== null && setForm({ ...form, grade: v })}
               >
-                <SelectTrigger className="bg-white/10 border-white/20 text-white [&>span]:text-white/70">
+                <SelectTrigger className="bg-white/10 border-white/25 text-white [&>span]:text-white/60">
                   <SelectValue placeholder="학년 선택 (선택)" />
                 </SelectTrigger>
                 <SelectContent>
@@ -132,20 +164,25 @@ export default function ConsultationForm() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-white/80 text-sm">문의 내용</Label>
+              <Label className="text-white/85 text-sm font-semibold">문의 내용</Label>
               <Textarea
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 placeholder="궁금한 점이나 수업에 대해 알고 싶은 내용을 남겨주세요."
                 rows={4}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-amber-400 resize-none"
+                className="bg-white/10 border-white/25 text-white placeholder:text-white/35 focus:border-white/60 resize-none"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-gray-900 font-bold text-base shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full py-4 rounded-2xl font-extrabold text-base transition-all duration-200 hover:-translate-y-0.5 hover:opacity-90 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+              style={{
+                background: "#FFD600",
+                color: "#222222",
+                boxShadow: "0 4px 20px rgba(255,214,0,0.4)",
+              }}
             >
               {loading ? "신청 중..." : "무료 상담 신청하기 →"}
             </button>

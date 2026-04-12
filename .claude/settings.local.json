@@ -11,7 +11,9 @@
       "Bash(npm run:*)",
       "Bash(del \"C:\\\\Users\\\\User\\\\Desktop\\\\chang\\\\src\\\\app\\\\api\\\\dev\\\\reset-admin\\\\route.ts\")",
       "Bash(npx next:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "mcp__filesystem__directory_tree",
+      "mcp__filesystem__list_allowed_directories"
     ]
   }
 }
