@@ -28,9 +28,26 @@ async function getParentData(parentId: number) {
       LIMIT 1
     `,
     sql`
-      SELECT id, title, created_at FROM notices
-      WHERE is_published = true
-      ORDER BY created_at DESC
+      SELECT n.id, n.title, n.published_at, n.created_at FROM notices n
+      WHERE n.is_published = true
+        AND (
+          n.target = 'all'
+          OR (
+            n.target = 'individual'
+            AND n.target_id IN (
+              SELECT id FROM students WHERE parent_id = ${parentId} AND deleted_at IS NULL
+            )
+          )
+          OR (
+            n.target = 'class'
+            AND n.target_id IN (
+              SELECT cs.class_id FROM class_students cs
+              JOIN students s ON s.id = cs.student_id
+              WHERE s.parent_id = ${parentId} AND s.deleted_at IS NULL
+            )
+          )
+        )
+      ORDER BY n.published_at DESC
       LIMIT 3
     `,
   ]);

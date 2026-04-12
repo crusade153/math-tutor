@@ -163,6 +163,19 @@ CREATE TABLE IF NOT EXISTS notices (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 시험 문제 상세 (성적 피드백용)
+CREATE TABLE IF NOT EXISTS exam_details (
+  id              SERIAL PRIMARY KEY,
+  score_id        INTEGER NOT NULL REFERENCES scores(id) ON DELETE CASCADE,
+  file_url        TEXT,                         -- Google Drive 등 외부 링크 (선택)
+  problems        JSONB NOT NULL DEFAULT '[]',  -- ProblemEntry[] {num, topic, correct, points}
+  weak_topics     TEXT[] NOT NULL DEFAULT '{}', -- 자동 계산된 취약 단원
+  teacher_comment TEXT,
+  created_at      TIMESTAMPTZ DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (score_id)
+);
+
 -- 인덱스
 CREATE INDEX IF NOT EXISTS idx_students_parent ON students(parent_id);
 CREATE INDEX IF NOT EXISTS idx_students_active ON students(is_active) WHERE deleted_at IS NULL;
@@ -174,3 +187,4 @@ CREATE INDEX IF NOT EXISTS idx_scores_student ON scores(student_id);
 CREATE INDEX IF NOT EXISTS idx_tuition_student ON tuition(student_id);
 CREATE INDEX IF NOT EXISTS idx_consultations_parent ON consultations(parent_id);
 CREATE INDEX IF NOT EXISTS idx_notices_published ON notices(is_published, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_exam_details_score ON exam_details(score_id);

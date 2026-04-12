@@ -153,6 +153,25 @@ export interface Notice {
   updated_at: string;
 }
 
+// 시험 문제 상세 (exam_details)
+export interface ProblemEntry {
+  num: number;      // 문제 번호
+  topic: string;    // 단원/유형 (예: "이차방정식")
+  correct: boolean; // true=정답, false=오답
+  points: number;   // 배점
+}
+
+export interface ExamDetail {
+  id: number;
+  score_id: number;
+  file_url: string | null;       // Google Drive 등 외부 링크
+  problems: ProblemEntry[];
+  weak_topics: string[];         // 자동 계산된 취약 단원
+  teacher_comment: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // API 응답 타입
 export type ApiResponse<T> =
   | { data: T; error?: never }

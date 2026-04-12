@@ -21,8 +21,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import ScoreChart from "@/components/admin/ScoreChart";
+import ExamDetailDialog from "@/components/admin/ExamDetailDialog";
 import { gradeLabel } from "@/lib/utils";
 
 interface Score {
@@ -54,6 +55,7 @@ export default function ScoresClient({
     class_id: "",
   });
   const [loading, setLoading] = useState(false);
+  const [examDialogScore, setExamDialogScore] = useState<Score | null>(null);
 
   async function loadScores(studentId: string) {
     setSelectedStudentId(studentId);
@@ -167,19 +169,31 @@ export default function ScoresClient({
                           {s.class_name && ` · ${s.class_name}`}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <span className="text-lg font-bold text-blue-600">
-                          {s.score}
-                        </span>
-                        <span className="text-sm text-gray-400">
-                          /{s.max_score}
-                        </span>
-                        <Badge
-                          className="ml-2 text-xs"
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <span className="text-lg font-bold text-blue-600">
+                            {s.score}
+                          </span>
+                          <span className="text-sm text-gray-400">
+                            /{s.max_score}
+                          </span>
+                          <Badge
+                            className="ml-2 text-xs"
+                            variant="outline"
+                          >
+                            {Math.round((Number(s.score) / Number(s.max_score)) * 100)}%
+                          </Badge>
+                        </div>
+                        <Button
                           variant="outline"
+                          size="sm"
+                          className="shrink-0 text-xs gap-1 text-amber-600 border-amber-200 hover:bg-amber-50"
+                          onClick={() => setExamDialogScore(s)}
+                          title="문제 상세 입력 / 학부모 피드백 발송"
                         >
-                          {Math.round((Number(s.score) / Number(s.max_score)) * 100)}%
-                        </Badge>
+                          <FileText size={13} />
+                          문제 상세
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -188,6 +202,17 @@ export default function ScoresClient({
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* 문제 상세 다이얼로그 */}
+      {examDialogScore && selectedStudent && (
+        <ExamDetailDialog
+          open={!!examDialogScore}
+          onClose={() => setExamDialogScore(null)}
+          scoreId={examDialogScore.id}
+          studentName={selectedStudent.name}
+          examName={examDialogScore.exam_name}
+        />
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

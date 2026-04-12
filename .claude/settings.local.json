@@ -13,7 +13,8 @@
       "Bash(npx next:*)",
       "Bash(xargs grep:*)",
       "mcp__filesystem__directory_tree",
-      "mcp__filesystem__list_allowed_directories"
+      "mcp__filesystem__list_allowed_directories",
+      "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)"
     ]
   }
 }
