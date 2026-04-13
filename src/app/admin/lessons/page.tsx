@@ -20,7 +20,15 @@ async function getData() {
     sql`SELECT id, name FROM classes WHERE deleted_at IS NULL AND is_active = true ORDER BY name`,
   ]);
 
-  return { lessons, classes, year, month };
+  const normalizedLessons = (lessons as any[]).map((l) => ({
+    ...l,
+    lesson_date:
+      l.lesson_date instanceof Date
+        ? l.lesson_date.toISOString().slice(0, 10)
+        : String(l.lesson_date).slice(0, 10),
+  }));
+
+  return { lessons: normalizedLessons, classes, year, month };
 }
 
 export default async function LessonsPage() {
