@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/auth";
 
 // 인증 없이 접근 가능한 경로
-const PUBLIC_PATHS = ["/", "/login"];
-const PUBLIC_API_PATHS = ["/api/auth/login", "/api/inquiries"];
+const PUBLIC_PATHS = ["/", "/login", "/attend"];
+const PUBLIC_API_PATHS = ["/api/auth/login", "/api/inquiries", "/api/attendance/pin"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

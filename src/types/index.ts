@@ -30,6 +30,7 @@ export interface Student {
   name: string;
   grade: string;
   school: string | null;
+  pin: string | null;
   is_active: boolean;
   created_at: string;
   deleted_at: string | null;
@@ -63,8 +64,9 @@ export interface Attendance {
   lesson_id: number;
   student_id: number;
   status: "present" | "absent" | "late" | "excused";
-  method: "qr" | "manual" | null;
+  method: "qr" | "manual" | "pin" | null;
   checked_at: string | null;
+  checked_out_at: string | null;
 }
 
 export interface QRToken {

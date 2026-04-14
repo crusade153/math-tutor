@@ -19,9 +19,10 @@ export async function GET(request: NextRequest) {
     `;
     return NextResponse.json({ data: rows });
   } else {
-    // 학부모: 본인 자녀만
+    // 학부모: 본인 자녀만 (pin 제외)
     const rows = await sql`
-      SELECT s.*
+      SELECT s.id, s.parent_id, s.name, s.grade, s.school,
+             s.is_active, s.created_at, s.deleted_at
       FROM students s
       WHERE s.parent_id = ${session.userId} AND s.deleted_at IS NULL
       ORDER BY s.name
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, grade, school, parent_id } = body;
+    const { name, grade, school, parent_id, pin } = body;
 
     if (!name || !grade) {
       return NextResponse.json(
@@ -47,9 +48,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (pin && !/^\d{4}$/.test(pin)) {
+      return NextResponse.json(
+        { error: "PIN은 4자리 숫자여야 합니다." },
+        { status: 400 }
+      );
+    }
+
     const rows = await sql`
-      INSERT INTO students (name, grade, school, parent_id)
-      VALUES (${name}, ${grade}, ${school ?? null}, ${parent_id ?? null})
+      INSERT INTO students (name, grade, school, parent_id, pin)
+      VALUES (${name}, ${grade}, ${school ?? null}, ${parent_id ?? null}, ${pin ?? null})
       RETURNING *
     `;
 

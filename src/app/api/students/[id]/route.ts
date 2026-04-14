@@ -45,16 +45,38 @@ export async function PUT(
   const { id } = await params;
   const body = await request.json();
   const { name, grade, school, parent_id, is_active } = body;
+  const hasPin = "pin" in body;
+  const pin: string | null = hasPin ? (body.pin || null) : null;
 
-  await sql`
-    UPDATE students
-    SET name = COALESCE(${name ?? null}, name),
-        grade = COALESCE(${grade ?? null}, grade),
-        school = COALESCE(${school ?? null}, school),
-        parent_id = COALESCE(${parent_id ?? null}, parent_id),
-        is_active = COALESCE(${is_active ?? null}, is_active)
-    WHERE id = ${parseInt(id)} AND deleted_at IS NULL
-  `;
+  if (hasPin && pin !== null && !/^\d{4}$/.test(pin)) {
+    return NextResponse.json(
+      { error: "PIN은 4자리 숫자여야 합니다." },
+      { status: 400 }
+    );
+  }
+
+  if (hasPin) {
+    await sql`
+      UPDATE students
+      SET name = COALESCE(${name ?? null}, name),
+          grade = COALESCE(${grade ?? null}, grade),
+          school = COALESCE(${school ?? null}, school),
+          parent_id = COALESCE(${parent_id ?? null}, parent_id),
+          is_active = COALESCE(${is_active ?? null}, is_active),
+          pin = ${pin}
+      WHERE id = ${parseInt(id)} AND deleted_at IS NULL
+    `;
+  } else {
+    await sql`
+      UPDATE students
+      SET name = COALESCE(${name ?? null}, name),
+          grade = COALESCE(${grade ?? null}, grade),
+          school = COALESCE(${school ?? null}, school),
+          parent_id = COALESCE(${parent_id ?? null}, parent_id),
+          is_active = COALESCE(${is_active ?? null}, is_active)
+      WHERE id = ${parseInt(id)} AND deleted_at IS NULL
+    `;
+  }
 
   return NextResponse.json({ data: { ok: true } });
 }

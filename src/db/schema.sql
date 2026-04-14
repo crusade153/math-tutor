@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS students (
   name VARCHAR(100) NOT NULL,
   grade VARCHAR(50) NOT NULL,
   school VARCHAR(100),
+  pin VARCHAR(4),
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   deleted_at TIMESTAMPTZ
@@ -63,8 +64,9 @@ CREATE TABLE IF NOT EXISTS attendance (
   lesson_id INTEGER REFERENCES lessons(id),
   student_id INTEGER REFERENCES students(id),
   status VARCHAR(20) DEFAULT 'absent' CHECK (status IN ('present', 'absent', 'late', 'excused')),
-  method VARCHAR(20) CHECK (method IN ('qr', 'manual')),
+  method VARCHAR(20) CHECK (method IN ('qr', 'manual', 'pin')),
   checked_at TIMESTAMPTZ,
+  checked_out_at TIMESTAMPTZ,
   UNIQUE (lesson_id, student_id)
 );
 
@@ -177,6 +179,7 @@ CREATE TABLE IF NOT EXISTS exam_details (
 );
 
 -- 인덱스
+CREATE UNIQUE INDEX IF NOT EXISTS idx_students_pin ON students(pin) WHERE pin IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_students_parent ON students(parent_id);
 CREATE INDEX IF NOT EXISTS idx_students_active ON students(is_active) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_lessons_class_date ON lessons(class_id, lesson_date);

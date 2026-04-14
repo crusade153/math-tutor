@@ -26,6 +26,7 @@ interface StudentRow {
   parent_name: string | null;
   parent_email: string | null;
   parent_phone: string | null;
+  pin: string | null;
   is_active: boolean;
 }
 type Student = StudentRow;
@@ -109,6 +110,7 @@ export default function StudentsClient({
               <TableHead>학교</TableHead>
               <TableHead>학부모</TableHead>
               <TableHead>연락처</TableHead>
+              <TableHead>QR PIN</TableHead>
               <TableHead>상태</TableHead>
               <TableHead className="text-right">관리</TableHead>
             </TableRow>
@@ -116,7 +118,7 @@ export default function StudentsClient({
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-400">
                   학생이 없습니다.
                 </TableCell>
               </TableRow>
@@ -128,6 +130,15 @@ export default function StudentsClient({
                   <TableCell>{s.school ?? "-"}</TableCell>
                   <TableCell>{s.parent_name ?? "-"}</TableCell>
                   <TableCell>{s.parent_phone ?? "-"}</TableCell>
+                  <TableCell>
+                    {s.pin ? (
+                      <Badge className="bg-blue-100 text-blue-700 font-mono" variant="outline">
+                        {s.pin}
+                      </Badge>
+                    ) : (
+                      <span className="text-gray-300 text-xs">미설정</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge
                       variant={s.is_active ? "default" : "secondary"}

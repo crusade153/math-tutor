@@ -21,7 +21,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import QRDisplay from "@/components/admin/QRDisplay";
+import RoomQRDisplay from "@/components/admin/RoomQRDisplay";
 import { formatDate } from "@/lib/utils";
+import { QrCode } from "lucide-react";
 
 interface Lesson {
   id: number;
@@ -43,6 +45,7 @@ interface AttendanceRecord {
   status: string;
   method: string | null;
   checked_at: string | null;
+  checked_out_at: string | null;
 }
 
 const STATUS_OPTS = [
@@ -79,6 +82,7 @@ export default function AttendanceClient({
   );
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
+  const [showRoomQR, setShowRoomQR] = useState(false);
 
   useEffect(() => {
     if (selectedLessonId) loadAttendance(parseInt(selectedLessonId));
@@ -122,6 +126,28 @@ export default function AttendanceClient({
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold">출결 관리</h1>
+      </div>
+
+      {/* 방 QR 코드 섹션 */}
+      <div className="mb-5 no-print">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowRoomQR((v) => !v)}
+          className="flex items-center gap-1.5"
+        >
+          <QrCode size={15} />
+          방 QR 코드 {showRoomQR ? "숨기기" : "보기"}
+        </Button>
+        {showRoomQR && (
+          <div className="mt-3 p-4 bg-gray-50 rounded-xl border">
+            <p className="text-sm text-gray-500 mb-1">
+              공부방에 붙여두는 <strong>입실/퇴실 QR</strong>입니다.
+              학생이 폰으로 스캔 후 4자리 PIN을 입력하면 출석이 자동 기록됩니다.
+            </p>
+            <RoomQRDisplay appUrl={appUrl} />
+          </div>
+        )}
       </div>
 
       <div className="mb-4">
@@ -188,7 +214,8 @@ export default function AttendanceClient({
                       <TableHead>학년</TableHead>
                       <TableHead>상태</TableHead>
                       <TableHead>방법</TableHead>
-                      <TableHead>시간</TableHead>
+                      <TableHead>입실</TableHead>
+                      <TableHead>퇴실</TableHead>
                       <TableHead>변경</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -199,11 +226,20 @@ export default function AttendanceClient({
                         <TableCell className="text-sm text-gray-500">{a.grade}</TableCell>
                         <TableCell>{statusBadge(a.status)}</TableCell>
                         <TableCell className="text-xs text-gray-400">
-                          {a.method === "qr" ? "QR" : a.method === "manual" ? "수동" : "-"}
+                          {a.method === "qr" ? "QR" : a.method === "pin" ? "PIN" : a.method === "manual" ? "수동" : "-"}
                         </TableCell>
                         <TableCell className="text-xs text-gray-400">
                           {a.checked_at
                             ? new Date(a.checked_at).toLocaleTimeString("ko-KR", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                timeZone: "Asia/Seoul",
+                              })
+                            : "-"}
+                        </TableCell>
+                        <TableCell className="text-xs text-gray-400">
+                          {a.checked_out_at
+                            ? new Date(a.checked_out_at).toLocaleTimeString("ko-KR", {
                                 hour: "2-digit",
                                 minute: "2-digit",
                                 timeZone: "Asia/Seoul",

@@ -33,6 +33,7 @@ interface Student {
   grade: string;
   school: string;
   parent_id: number | null;
+  pin?: string | null;
 }
 
 interface Props {
@@ -47,6 +48,7 @@ export default function StudentDialog({ open, onClose, student, onSaved }: Props
   const [grade, setGrade] = useState("");
   const [school, setSchool] = useState("");
   const [parentId, setParentId] = useState<string>("");
+  const [pin, setPin] = useState("");
   const [parents, setParents] = useState<Parent[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -56,6 +58,7 @@ export default function StudentDialog({ open, onClose, student, onSaved }: Props
       setGrade(student?.grade ?? "");
       setSchool(student?.school ?? "");
       setParentId(student?.parent_id?.toString() ?? "");
+      setPin(student?.pin ?? "");
       fetchParents();
     }
   }, [open, student]);
@@ -74,6 +77,10 @@ export default function StudentDialog({ open, onClose, student, onSaved }: Props
       toast.error("이름과 학년은 필수입니다.");
       return;
     }
+    if (pin && !/^\d{4}$/.test(pin)) {
+      toast.error("PIN은 4자리 숫자여야 합니다.");
+      return;
+    }
     setLoading(true);
 
     const body = {
@@ -81,6 +88,7 @@ export default function StudentDialog({ open, onClose, student, onSaved }: Props
       grade,
       school: school || null,
       parent_id: parentId ? parseInt(parentId) : null,
+      pin: pin || null,
     };
 
     const url = student?.id ? `/api/students/${student.id}` : "/api/students";
@@ -141,6 +149,19 @@ export default function StudentDialog({ open, onClose, student, onSaved }: Props
               onChange={(e) => setSchool(e.target.value)}
               placeholder="학교명"
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label>QR 출결 PIN (4자리 숫자)</Label>
+            <Input
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="예: 1234"
+              inputMode="numeric"
+              maxLength={4}
+            />
+            <p className="text-xs text-gray-400">
+              학생이 QR 스캔 후 입력하는 번호. 공부방 전체에서 고유해야 합니다.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label>학부모 연결</Label>
