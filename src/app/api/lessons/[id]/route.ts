@@ -75,6 +75,7 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  await sql`UPDATE lessons SET status = 'cancelled' WHERE id = ${parseInt(id)}`;
+  await sql`DELETE FROM attendance WHERE lesson_id = ${parseInt(id)}`;
+  await sql`DELETE FROM lessons WHERE id = ${parseInt(id)}`;
   return NextResponse.json({ data: { ok: true } });
 }

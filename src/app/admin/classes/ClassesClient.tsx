@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, UserPlus, X, Search } from "lucide-react";
 
 interface Class {
   id: number;
@@ -27,12 +27,27 @@ interface Class {
   student_count: number;
 }
 
+interface Student {
+  id: number;
+  name: string;
+  grade: string | null;
+  school: string | null;
+}
+
 export default function ClassesClient({ initialClasses }: { initialClasses: Class[] }) {
   const [classes, setClasses] = useState<Class[]>(initialClasses);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Class | null>(null);
   const [form, setForm] = useState({ name: "", grade_level: "", schedule_desc: "", max_students: "10" });
   const [loading, setLoading] = useState(false);
+
+  // 학생 배분 다이얼로그
+  const [studentDialogOpen, setStudentDialogOpen] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
+  const [enrolledStudents, setEnrolledStudents] = useState<Student[]>([]);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
+  const [studentLoading, setStudentLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   function openCreate() {
     setEditing(null);
@@ -49,6 +64,69 @@ export default function ClassesClient({ initialClasses }: { initialClasses: Clas
       max_students: c.max_students.toString(),
     });
     setDialogOpen(true);
+  }
+
+  async function openStudentDialog(c: Class) {
+    setSelectedClass(c);
+    setSearchQuery("");
+    setStudentDialogOpen(true);
+    setStudentLoading(true);
+
+    const [classRes, studentsRes] = await Promise.all([
+      fetch(`/api/classes/${c.id}`),
+      fetch("/api/students"),
+    ]);
+
+    if (classRes.ok && studentsRes.ok) {
+      const classJson = await classRes.json();
+      const studentsJson = await studentsRes.json();
+      setEnrolledStudents(classJson.data.students ?? []);
+      setAllStudents(studentsJson.data ?? []);
+    } else {
+      toast.error("학생 정보를 불러오지 못했습니다.");
+      setStudentDialogOpen(false);
+    }
+    setStudentLoading(false);
+  }
+
+  async function handleEnroll(student: Student) {
+    if (!selectedClass) return;
+    const res = await fetch(`/api/classes/${selectedClass.id}/students`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ student_id: student.id }),
+    });
+    if (res.ok) {
+      setEnrolledStudents((prev) => [...prev, student]);
+      // 반 카드의 student_count 업데이트
+      setClasses((prev) =>
+        prev.map((c) =>
+          c.id === selectedClass.id ? { ...c, student_count: c.student_count + 1 } : c
+        )
+      );
+      toast.success(`${student.name} 학생을 등록했습니다.`);
+    } else {
+      toast.error("등록 실패");
+    }
+  }
+
+  async function handleUnenroll(student: Student) {
+    if (!selectedClass) return;
+    const res = await fetch(
+      `/api/classes/${selectedClass.id}/students?student_id=${student.id}`,
+      { method: "DELETE" }
+    );
+    if (res.ok) {
+      setEnrolledStudents((prev) => prev.filter((s) => s.id !== student.id));
+      setClasses((prev) =>
+        prev.map((c) =>
+          c.id === selectedClass.id ? { ...c, student_count: Math.max(0, c.student_count - 1) } : c
+        )
+      );
+      toast.success(`${student.name} 학생을 제외했습니다.`);
+    } else {
+      toast.error("제외 실패");
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -101,6 +179,23 @@ export default function ClassesClient({ initialClasses }: { initialClasses: Clas
     }
   }
 
+  const enrolledIds = new Set(enrolledStudents.map((s) => s.id));
+  const availableStudents = allStudents.filter(
+    (s) =>
+      !enrolledIds.has(s.id) &&
+      (searchQuery === "" ||
+        s.name.includes(searchQuery) ||
+        (s.grade ?? "").includes(searchQuery) ||
+        (s.school ?? "").includes(searchQuery))
+  );
+  const filteredEnrolled = enrolledStudents.filter(
+    (s) =>
+      searchQuery === "" ||
+      s.name.includes(searchQuery) ||
+      (s.grade ?? "").includes(searchQuery) ||
+      (s.school ?? "").includes(searchQuery)
+  );
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -121,6 +216,15 @@ export default function ClassesClient({ initialClasses }: { initialClasses: Clas
               <div className="flex items-start justify-between">
                 <CardTitle className="text-base">{c.name}</CardTitle>
                 <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    title="학생 배분"
+                    onClick={() => openStudentDialog(c)}
+                  >
+                    <UserPlus size={14} />
+                  </Button>
                   <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>
                     <Pencil size={14} />
                   </Button>
@@ -144,7 +248,10 @@ export default function ClassesClient({ initialClasses }: { initialClasses: Clas
               {c.schedule_desc && (
                 <p className="text-gray-600">{c.schedule_desc}</p>
               )}
-              <div className="flex items-center gap-1 text-gray-500">
+              <div
+                className="flex items-center gap-1 text-gray-500 cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={() => openStudentDialog(c)}
+              >
                 <Users size={14} />
                 <span>
                   {c.student_count} / {c.max_students}명
@@ -160,6 +267,7 @@ export default function ClassesClient({ initialClasses }: { initialClasses: Clas
         )}
       </div>
 
+      {/* 반 생성/수정 다이얼로그 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -211,6 +319,123 @@ export default function ClassesClient({ initialClasses }: { initialClasses: Clas
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 학생 배분 다이얼로그 */}
+      <Dialog open={studentDialogOpen} onOpenChange={setStudentDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              학생 배분 — {selectedClass?.name}
+              <span className="ml-2 text-sm font-normal text-gray-500">
+                {enrolledStudents.length} / {selectedClass?.max_students}명
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+
+          {studentLoading ? (
+            <div className="py-12 text-center text-gray-400 text-sm">불러오는 중...</div>
+          ) : (
+            <div className="space-y-4">
+              {/* 검색 */}
+              <div className="relative">
+                <Search size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Input
+                  className="pl-8"
+                  placeholder="이름, 학년, 학교로 검색"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              {/* 등록된 학생 */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                  등록된 학생 ({enrolledStudents.length}명)
+                </p>
+                {filteredEnrolled.length === 0 ? (
+                  <p className="text-xs text-gray-400 py-2 text-center">
+                    {searchQuery ? "검색 결과 없음" : "아직 배정된 학생이 없습니다."}
+                  </p>
+                ) : (
+                  <ul className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                    {filteredEnrolled.map((s) => (
+                      <li
+                        key={s.id}
+                        className="flex items-center justify-between rounded-lg bg-blue-50 px-3 py-2"
+                      >
+                        <div>
+                          <span className="text-sm font-medium">{s.name}</span>
+                          {(s.grade || s.school) && (
+                            <span className="text-xs text-gray-500 ml-2">
+                              {[s.grade, s.school].filter(Boolean).join(" · ")}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleUnenroll(s)}
+                          className="text-gray-400 hover:text-red-500 transition-colors ml-2"
+                          title="제외"
+                        >
+                          <X size={15} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* 구분선 */}
+              <div className="border-t" />
+
+              {/* 추가 가능한 학생 */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                  추가 가능한 학생 ({availableStudents.length}명)
+                </p>
+                {availableStudents.length === 0 ? (
+                  <p className="text-xs text-gray-400 py-2 text-center">
+                    {searchQuery ? "검색 결과 없음" : "추가할 수 있는 학생이 없습니다."}
+                  </p>
+                ) : (
+                  <ul className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                    {availableStudents.map((s) => (
+                      <li
+                        key={s.id}
+                        className="flex items-center justify-between rounded-lg hover:bg-gray-50 px-3 py-2 border border-transparent hover:border-gray-200 transition-colors"
+                      >
+                        <div>
+                          <span className="text-sm font-medium">{s.name}</span>
+                          {(s.grade || s.school) && (
+                            <span className="text-xs text-gray-500 ml-2">
+                              {[s.grade, s.school].filter(Boolean).join(" · ")}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleEnroll(s)}
+                          className="text-gray-400 hover:text-blue-600 transition-colors ml-2"
+                          title="추가"
+                          disabled={enrolledStudents.length >= (selectedClass?.max_students ?? 0)}
+                        >
+                          <Plus size={15} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStudentDialogOpen(false)}>
+              닫기
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
