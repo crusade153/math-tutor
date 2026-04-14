@@ -70,6 +70,16 @@ CREATE TABLE IF NOT EXISTS attendance (
   UNIQUE (lesson_id, student_id)
 );
 
+-- QR 입퇴실 방문 기록 (수업 무관, 하루 1회)
+CREATE TABLE IF NOT EXISTS room_visits (
+  id SERIAL PRIMARY KEY,
+  student_id INTEGER REFERENCES students(id),
+  visit_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  checked_in_at TIMESTAMPTZ,
+  checked_out_at TIMESTAMPTZ,
+  UNIQUE (student_id, visit_date)
+);
+
 -- QR 토큰 (수업별 1회용)
 CREATE TABLE IF NOT EXISTS qr_tokens (
   id SERIAL PRIMARY KEY,
@@ -185,6 +195,7 @@ CREATE INDEX IF NOT EXISTS idx_students_active ON students(is_active) WHERE dele
 CREATE INDEX IF NOT EXISTS idx_lessons_class_date ON lessons(class_id, lesson_date);
 CREATE INDEX IF NOT EXISTS idx_attendance_lesson ON attendance(lesson_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id);
+CREATE INDEX IF NOT EXISTS idx_room_visits_date ON room_visits(visit_date);
 CREATE INDEX IF NOT EXISTS idx_qr_tokens_lesson ON qr_tokens(lesson_id);
 CREATE INDEX IF NOT EXISTS idx_scores_student ON scores(student_id);
 CREATE INDEX IF NOT EXISTS idx_tuition_student ON tuition(student_id);

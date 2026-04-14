@@ -14,10 +14,7 @@ export async function POST(request: NextRequest) {
       );
     }
     if (type !== "entry" && type !== "exit") {
-      return NextResponse.json(
-        { error: "잘못된 요청입니다." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
     }
 
     // 학생 조회
@@ -40,10 +37,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 오늘 수업 조회 (학생이 속한 반의 오늘 예정 수업)
+    // 오늘 수업 조회 (없어도 괜찮음 — 선택적)
     const lessons = await sql`
-      SELECT l.id AS lesson_id, l.lesson_date, l.start_time, l.end_time,
-             c.name AS class_name
+      SELECT l.id AS lesson_id, c.name AS class_name
       FROM lessons l
       JOIN classes c ON c.id = l.class_id
       JOIN class_students cs ON cs.class_id = l.class_id
@@ -53,76 +49,87 @@ export async function POST(request: NextRequest) {
       ORDER BY l.start_time
       LIMIT 1
     `;
-    if (lessons.length === 0) {
-      return NextResponse.json(
-        { error: "오늘 수업이 없습니다." },
-        { status: 404 }
-      );
-    }
-    const lesson = lessons[0];
+    const lesson = lessons[0] ?? null;
 
     if (type === "entry") {
-      // 입실: UPSERT — 최초 입실 시간 보존
-      await sql`
-        INSERT INTO attendance (lesson_id, student_id, status, method, checked_at)
-        VALUES (${lesson.lesson_id}, ${student.id}, 'present', 'pin', NOW())
-        ON CONFLICT (lesson_id, student_id)
-        DO UPDATE SET
-          status = 'present',
-          method = 'pin',
-          checked_at = CASE
-            WHEN attendance.checked_at IS NULL THEN NOW()
-            ELSE attendance.checked_at
-          END
+      // 1. room_visits에 입실 기록 (항상)
+      const existing = await sql`
+        SELECT id, checked_in_at FROM room_visits
+        WHERE student_id = ${student.id} AND visit_date = CURRENT_DATE
       `;
+      const alreadyIn = existing.length > 0 && existing[0].checked_in_at;
 
-      const alreadyIn = await sql`
-        SELECT checked_at FROM attendance
-        WHERE lesson_id = ${lesson.lesson_id} AND student_id = ${student.id}
-          AND checked_at < NOW() - INTERVAL '2 seconds'
-      `;
-      const message =
-        alreadyIn.length > 0
-          ? `${student.name} 학생은 이미 입실 처리되었습니다.`
-          : `${student.name} 학생 입실 완료!`;
+      if (existing.length === 0) {
+        await sql`
+          INSERT INTO room_visits (student_id, visit_date, checked_in_at)
+          VALUES (${student.id}, CURRENT_DATE, NOW())
+        `;
+      }
+      // 이미 있으면 첫 입실 시간 보존 (업데이트 안 함)
+
+      // 2. 수업이 있으면 attendance 테이블에도 기록
+      if (lesson) {
+        await sql`
+          INSERT INTO attendance (lesson_id, student_id, status, method, checked_at)
+          VALUES (${lesson.lesson_id}, ${student.id}, 'present', 'pin', NOW())
+          ON CONFLICT (lesson_id, student_id)
+          DO UPDATE SET
+            status = 'present',
+            method = 'pin',
+            checked_at = CASE
+              WHEN attendance.checked_at IS NULL THEN NOW()
+              ELSE attendance.checked_at
+            END
+        `;
+      }
 
       return NextResponse.json({
         data: {
           ok: true,
           type: "entry",
           studentName: student.name,
-          className: lesson.class_name,
-          lessonDate: lesson.lesson_date,
-          message,
+          className: lesson?.class_name ?? null,
+          message: alreadyIn
+            ? `${student.name} 학생은 이미 입실 처리되었습니다.`
+            : `${student.name} 학생 입실 완료!`,
         },
       });
     } else {
-      // 퇴실: 입실 기록 확인 후 checked_out_at 업데이트
-      const existing = await sql`
-        SELECT checked_at, checked_out_at
-        FROM attendance
-        WHERE lesson_id = ${lesson.lesson_id} AND student_id = ${student.id}
+      // 퇴실
+      // 1. room_visits에서 오늘 입실 기록 확인
+      const visit = await sql`
+        SELECT id, checked_in_at FROM room_visits
+        WHERE student_id = ${student.id} AND visit_date = CURRENT_DATE
       `;
-      if (existing.length === 0 || !existing[0].checked_at) {
+      if (visit.length === 0 || !visit[0].checked_in_at) {
         return NextResponse.json(
           { error: "입실 기록이 없습니다. 먼저 입실 QR을 스캔하세요." },
           { status: 400 }
         );
       }
 
+      // 2. room_visits 퇴실 시간 업데이트
       await sql`
-        UPDATE attendance
+        UPDATE room_visits
         SET checked_out_at = NOW()
-        WHERE lesson_id = ${lesson.lesson_id} AND student_id = ${student.id}
+        WHERE student_id = ${student.id} AND visit_date = CURRENT_DATE
       `;
+
+      // 3. 수업이 있으면 attendance에도 퇴실 시간 기록
+      if (lesson) {
+        await sql`
+          UPDATE attendance
+          SET checked_out_at = NOW()
+          WHERE lesson_id = ${lesson.lesson_id} AND student_id = ${student.id}
+        `;
+      }
 
       return NextResponse.json({
         data: {
           ok: true,
           type: "exit",
           studentName: student.name,
-          className: lesson.class_name,
-          lessonDate: lesson.lesson_date,
+          className: lesson?.class_name ?? null,
           message: `${student.name} 학생 퇴실 완료!`,
         },
       });

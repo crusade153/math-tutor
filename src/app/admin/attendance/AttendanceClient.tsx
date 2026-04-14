@@ -48,6 +48,15 @@ interface AttendanceRecord {
   checked_out_at: string | null;
 }
 
+interface RoomVisit {
+  id: number;
+  student_id: number;
+  student_name: string;
+  grade: string;
+  checked_in_at: string | null;
+  checked_out_at: string | null;
+}
+
 const STATUS_OPTS = [
   { value: "present", label: "출석", color: "bg-green-100 text-green-700" },
   { value: "absent", label: "결석", color: "bg-red-100 text-red-700" },
@@ -83,10 +92,23 @@ export default function AttendanceClient({
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
   const [showRoomQR, setShowRoomQR] = useState(false);
+  const [roomVisits, setRoomVisits] = useState<RoomVisit[]>([]);
 
   useEffect(() => {
     if (selectedLessonId) loadAttendance(parseInt(selectedLessonId));
   }, [selectedLessonId]);
+
+  useEffect(() => {
+    loadRoomVisits();
+  }, []);
+
+  async function loadRoomVisits() {
+    const res = await fetch("/api/attendance/room-visits");
+    if (res.ok) {
+      const json = await res.json();
+      setRoomVisits(json.data ?? []);
+    }
+  }
 
   async function loadAttendance(lessonId: number) {
     setLoadingAttendance(true);
@@ -285,6 +307,84 @@ export default function AttendanceClient({
           </CardContent>
         </Card>
       )}
+
+      {/* 오늘 QR 입퇴실 현황 */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-gray-700">
+            오늘 QR 입퇴실 현황
+            <span className="ml-2 text-sm font-normal text-gray-400">
+              ({roomVisits.length}명)
+            </span>
+          </h2>
+          <Button variant="outline" size="sm" onClick={loadRoomVisits}>
+            새로고침
+          </Button>
+        </div>
+
+        {roomVisits.length === 0 ? (
+          <Card>
+            <CardContent className="py-6 text-center text-gray-400 text-sm">
+              오늘 QR로 입실한 학생이 없습니다.
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>이름</TableHead>
+                  <TableHead>학년</TableHead>
+                  <TableHead>입실</TableHead>
+                  <TableHead>퇴실</TableHead>
+                  <TableHead>체류</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {roomVisits.map((v) => {
+                  const inTime = v.checked_in_at ? new Date(v.checked_in_at) : null;
+                  const outTime = v.checked_out_at ? new Date(v.checked_out_at) : null;
+                  const stayMin =
+                    inTime && outTime
+                      ? Math.round((outTime.getTime() - inTime.getTime()) / 60000)
+                      : null;
+                  return (
+                    <TableRow key={v.id}>
+                      <TableCell className="font-medium">{v.student_name}</TableCell>
+                      <TableCell className="text-sm text-gray-500">{v.grade}</TableCell>
+                      <TableCell className="text-sm">
+                        {inTime
+                          ? inTime.toLocaleTimeString("ko-KR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              timeZone: "Asia/Seoul",
+                            })
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {outTime ? (
+                          outTime.toLocaleTimeString("ko-KR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            timeZone: "Asia/Seoul",
+                          })
+                        ) : (
+                          <Badge className="bg-green-100 text-green-700 text-xs" variant="outline">
+                            공부 중
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs text-gray-400">
+                        {stayMin !== null ? `${stayMin}분` : "-"}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
