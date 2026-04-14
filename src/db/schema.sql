@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS classes (
   grade_level VARCHAR(50),
   schedule_desc VARCHAR(255),
   max_students INTEGER DEFAULT 10,
+  weekly_count INTEGER NOT NULL DEFAULT 2,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   deleted_at TIMESTAMPTZ

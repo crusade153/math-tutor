@@ -44,7 +44,7 @@ export async function PUT(
 
   const { id } = await params;
   const body = await request.json();
-  const { name, grade_level, schedule_desc, max_students, is_active } = body;
+  const { name, grade_level, schedule_desc, max_students, is_active, weekly_count } = body;
 
   await sql`
     UPDATE classes
@@ -52,7 +52,8 @@ export async function PUT(
         grade_level = COALESCE(${grade_level ?? null}, grade_level),
         schedule_desc = COALESCE(${schedule_desc ?? null}, schedule_desc),
         max_students = COALESCE(${max_students ?? null}, max_students),
-        is_active = COALESCE(${is_active ?? null}, is_active)
+        is_active = COALESCE(${is_active ?? null}, is_active),
+        weekly_count = COALESCE(${weekly_count ?? null}, weekly_count)
     WHERE id = ${parseInt(id)} AND deleted_at IS NULL
   `;
 

@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, grade_level, schedule_desc, max_students } = body;
+    const { name, grade_level, schedule_desc, max_students, weekly_count } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
     }
 
     const rows = await sql`
-      INSERT INTO classes (name, grade_level, schedule_desc, max_students)
-      VALUES (${name}, ${grade_level ?? null}, ${schedule_desc ?? null}, ${max_students ?? 10})
+      INSERT INTO classes (name, grade_level, schedule_desc, max_students, weekly_count)
+      VALUES (${name}, ${grade_level ?? null}, ${schedule_desc ?? null}, ${max_students ?? 10}, ${weekly_count ?? 2})
       RETURNING *
     `;
 

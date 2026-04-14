@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { calculateAttendanceRate, formatDate, gradeLabel } from "@/lib/utils";
+import { formatDate, gradeLabel } from "@/lib/utils";
 import { QrCode, Calendar, Bell } from "lucide-react";
 
 async function getParentData(parentId: number) {
@@ -54,28 +54,34 @@ async function getParentData(parentId: number) {
 
   type StudentRow = { id: number; name: string; grade: string; school: string | null };
 
-  // 각 학생의 출석률 계산
+  // 각 학생의 출석률 계산 (QR 방문 기반, 최근 4주)
   const studentStats = await Promise.all(
     (students as unknown as StudentRow[]).map(async (s) => {
-      const stats = await sql`
-        SELECT
-          COUNT(*)::int AS total,
-          COUNT(*) FILTER (WHERE a.status = 'present')::int AS attended
-        FROM class_students cs
-        JOIN lessons l ON l.class_id = cs.class_id
-        LEFT JOIN attendance a ON a.lesson_id = l.id AND a.student_id = cs.student_id
-        WHERE cs.student_id = ${s.id}
-          AND l.lesson_date <= CURRENT_DATE
-          AND l.status IN ('scheduled', 'completed')
-      `;
-      const stat = stats[0] as { total: number; attended: number };
+      const [classInfo, visitInfo] = await Promise.all([
+        sql`
+          SELECT COALESCE(SUM(c.weekly_count), 0)::int AS total_weekly
+          FROM class_students cs
+          JOIN classes c ON c.id = cs.class_id
+          WHERE cs.student_id = ${s.id} AND c.is_active = true AND c.deleted_at IS NULL
+        `,
+        sql`
+          SELECT COUNT(*)::int AS cnt
+          FROM room_visits
+          WHERE student_id = ${s.id}
+            AND visit_date >= CURRENT_DATE - INTERVAL '28 days'
+            AND checked_in_at IS NOT NULL
+        `,
+      ]);
+      const totalWeekly = (classInfo[0]?.total_weekly as number) ?? 0;
+      const actual = (visitInfo[0]?.cnt as number) ?? 0;
+      const expected = totalWeekly * 4;
       return {
         id: s.id,
         name: s.name,
         grade: s.grade,
         school: s.school,
-        total: stat.total,
-        attended: stat.attended,
+        actual,
+        expected,
       };
     })
   );
@@ -119,10 +125,10 @@ export default async function ParentDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-3xl font-bold text-blue-600">
-                  {calculateAttendanceRate(s.attended, s.total)}
+                  {s.expected === 0 ? "-" : `${Math.min(100, Math.round((s.actual / s.expected) * 100))}%`}
                 </p>
                 <p className="text-sm text-gray-400 mt-0.5">
-                  출석률 ({s.attended}/{s.total}회)
+                  출석률 ({s.actual}/{s.expected}회)
                 </p>
               </div>
               <Link href="/parent/attendance">

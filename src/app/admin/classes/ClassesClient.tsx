@@ -23,6 +23,7 @@ interface Class {
   grade_level: string | null;
   schedule_desc: string | null;
   max_students: number;
+  weekly_count: number;
   is_active: boolean;
   student_count: number;
 }
@@ -38,7 +39,7 @@ export default function ClassesClient({ initialClasses }: { initialClasses: Clas
   const [classes, setClasses] = useState<Class[]>(initialClasses);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Class | null>(null);
-  const [form, setForm] = useState({ name: "", grade_level: "", schedule_desc: "", max_students: "10" });
+  const [form, setForm] = useState({ name: "", grade_level: "", schedule_desc: "", max_students: "10", weekly_count: "2" });
   const [loading, setLoading] = useState(false);
 
   // 학생 배분 다이얼로그
@@ -51,7 +52,7 @@ export default function ClassesClient({ initialClasses }: { initialClasses: Clas
 
   function openCreate() {
     setEditing(null);
-    setForm({ name: "", grade_level: "", schedule_desc: "", max_students: "10" });
+    setForm({ name: "", grade_level: "", schedule_desc: "", max_students: "10", weekly_count: "2" });
     setDialogOpen(true);
   }
 
@@ -62,6 +63,7 @@ export default function ClassesClient({ initialClasses }: { initialClasses: Clas
       grade_level: c.grade_level ?? "",
       schedule_desc: c.schedule_desc ?? "",
       max_students: c.max_students.toString(),
+      weekly_count: (c.weekly_count ?? 2).toString(),
     });
     setDialogOpen(true);
   }
@@ -139,6 +141,7 @@ export default function ClassesClient({ initialClasses }: { initialClasses: Clas
       grade_level: form.grade_level || null,
       schedule_desc: form.schedule_desc || null,
       max_students: parseInt(form.max_students) || 10,
+      weekly_count: parseInt(form.weekly_count) || 2,
     };
 
     const url = editing ? `/api/classes/${editing.id}` : "/api/classes";
@@ -245,6 +248,9 @@ export default function ClassesClient({ initialClasses }: { initialClasses: Clas
                   {c.grade_level}
                 </Badge>
               )}
+              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-600">
+                주 {c.weekly_count}회
+              </Badge>
               {c.schedule_desc && (
                 <p className="text-gray-600">{c.schedule_desc}</p>
               )}
@@ -300,15 +306,30 @@ export default function ClassesClient({ initialClasses }: { initialClasses: Clas
                 rows={2}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label>최대 인원</Label>
-              <Input
-                type="number"
-                value={form.max_students}
-                onChange={(e) => setForm({ ...form, max_students: e.target.value })}
-                min={1}
-                max={30}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>주 수업 횟수</Label>
+                <select
+                  value={form.weekly_count}
+                  onChange={(e) => setForm({ ...form, weekly_count: e.target.value })}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <option key={n} value={n}>주 {n}회</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400">출결율 계산에 사용됩니다</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>최대 인원</Label>
+                <Input
+                  type="number"
+                  value={form.max_students}
+                  onChange={(e) => setForm({ ...form, max_students: e.target.value })}
+                  min={1}
+                  max={30}
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>

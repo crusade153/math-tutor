@@ -42,6 +42,7 @@ export interface Class {
   grade_level: string | null;
   schedule_desc: string | null;
   max_students: number;
+  weekly_count: number;
   is_active: boolean;
   created_at: string;
   deleted_at: string | null;
