@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, CheckCircle2, Circle, Filter } from "lucide-react";
 import { gradeLabel } from "@/lib/utils";
 
 interface Tuition {
@@ -50,13 +50,16 @@ export default function TuitionClient({
   tuition: initialTuition,
   students,
   currentMonth,
+  initialFilter = "all",
 }: {
   tuition: Tuition[];
   students: Student[];
   currentMonth: string;
+  initialFilter?: "all" | "unpaid";
 }) {
   const [tuition, setTuition] = useState<Tuition[]>(initialTuition);
   const [month, setMonth] = useState(currentMonth);
+  const [filter, setFilter] = useState<"all" | "unpaid">(initialFilter);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ student_id: "", amount: "", note: "" });
   const [loading, setLoading] = useState(false);
@@ -127,6 +130,7 @@ export default function TuitionClient({
   const paidCount = tuition.filter((t) => t.is_paid).length;
   const unpaidCount = tuition.length - paidCount;
   const totalAmount = tuition.reduce((sum, t) => sum + (t.is_paid ? t.amount : 0), 0);
+  const displayedTuition = filter === "unpaid" ? tuition.filter((t) => !t.is_paid) : tuition;
 
   return (
     <div>
@@ -147,6 +151,25 @@ export default function TuitionClient({
         <Button variant="outline" size="sm" onClick={() => navigate(1)}>
           <ChevronRight size={16} />
         </Button>
+        <div className="ml-auto flex gap-2">
+          <Button
+            variant={filter === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("all")}
+            className={filter === "all" ? "bg-blue-600 hover:bg-blue-700" : ""}
+          >
+            전체
+          </Button>
+          <Button
+            variant={filter === "unpaid" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("unpaid")}
+            className={filter === "unpaid" ? "bg-red-500 hover:bg-red-600 text-white border-transparent" : "text-red-500 border-red-200 hover:bg-red-50"}
+          >
+            <Filter size={13} className="mr-1" />
+            미납만 {unpaidCount > 0 && `(${unpaidCount})`}
+          </Button>
+        </div>
       </div>
 
       {/* 요약 카드 */}
@@ -186,14 +209,14 @@ export default function TuitionClient({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tuition.length === 0 ? (
+            {displayedTuition.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-gray-400">
-                  이 달의 수업료 데이터가 없습니다.
+                  {filter === "unpaid" ? "이번 달 미납자가 없습니다." : "이 달의 수업료 데이터가 없습니다."}
                 </TableCell>
               </TableRow>
             ) : (
-              tuition.map((t) => (
+              displayedTuition.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.student_name}</TableCell>
                   <TableCell className="text-sm text-gray-500">{gradeLabel(t.grade)}</TableCell>

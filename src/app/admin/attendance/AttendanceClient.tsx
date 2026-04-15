@@ -10,6 +10,15 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -23,7 +32,7 @@ import { toast } from "sonner";
 import QRDisplay from "@/components/admin/QRDisplay";
 import RoomQRDisplay from "@/components/admin/RoomQRDisplay";
 import { formatDate } from "@/lib/utils";
-import { QrCode } from "lucide-react";
+import { QrCode, CalendarPlus } from "lucide-react";
 
 interface Lesson {
   id: number;
@@ -94,6 +103,17 @@ export default function AttendanceClient({
   const [showRoomQR, setShowRoomQR] = useState(false);
   const [roomVisits, setRoomVisits] = useState<RoomVisit[]>([]);
 
+  // 보충 수업 등록 모달
+  const [makeupDialogOpen, setMakeupDialogOpen] = useState(false);
+  const [makeupForm, setMakeupForm] = useState({
+    lesson_date: "",
+    start_time: "",
+    end_time: "",
+    topic: "",
+  });
+  const [makeupClassId, setMakeupClassId] = useState<number | null>(null);
+  const [makeupLoading, setMakeupLoading] = useState(false);
+
   useEffect(() => {
     if (selectedLessonId) loadAttendance(parseInt(selectedLessonId));
   }, [selectedLessonId]);
@@ -143,6 +163,47 @@ export default function AttendanceClient({
   const selectedLesson = allLessons.find(
     (l) => l.id.toString() === selectedLessonId
   );
+
+  function openMakeupDialog(a: AttendanceRecord) {
+    if (!selectedLesson) return;
+    setMakeupClassId(selectedLesson.class_id);
+    setMakeupForm({
+      lesson_date: "",
+      start_time: selectedLesson.start_time.slice(0, 5),
+      end_time: selectedLesson.end_time.slice(0, 5),
+      topic: selectedLesson.topic ? `[보충] ${selectedLesson.topic}` : "[보충]",
+    });
+    setMakeupDialogOpen(true);
+  }
+
+  async function handleMakeupSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!makeupClassId || !makeupForm.lesson_date || !makeupForm.start_time || !makeupForm.end_time) {
+      toast.error("날짜와 시간을 입력해주세요.");
+      return;
+    }
+    setMakeupLoading(true);
+    const res = await fetch("/api/lessons", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        class_id: makeupClassId,
+        lesson_date: makeupForm.lesson_date,
+        start_time: makeupForm.start_time,
+        end_time: makeupForm.end_time,
+        topic: makeupForm.topic || null,
+        status: "makeup",
+      }),
+    });
+    if (res.ok) {
+      toast.success("보충 수업이 등록되었습니다.");
+      setMakeupDialogOpen(false);
+    } else {
+      const json = await res.json();
+      toast.error(json.error ?? "등록 실패");
+    }
+    setMakeupLoading(false);
+  }
 
   return (
     <div>
@@ -269,21 +330,34 @@ export default function AttendanceClient({
                             : "-"}
                         </TableCell>
                         <TableCell>
-                          <Select
-                            value={a.status}
-                            onValueChange={(v) => v !== null && updateStatus(a.student_id, v)}
-                          >
-                            <SelectTrigger className="h-7 w-20 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {STATUS_OPTS.map((s) => (
-                                <SelectItem key={s.value} value={s.value}>
-                                  {s.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex items-center gap-1">
+                            <Select
+                              value={a.status}
+                              onValueChange={(v) => v !== null && updateStatus(a.student_id, v)}
+                            >
+                              <SelectTrigger className="h-7 w-20 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {STATUS_OPTS.map((s) => (
+                                  <SelectItem key={s.value} value={s.value}>
+                                    {s.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {a.status === "absent" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-1.5 text-amber-600 hover:bg-amber-50"
+                                title="보충 수업 등록"
+                                onClick={() => openMakeupDialog(a)}
+                              >
+                                <CalendarPlus size={15} />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -385,6 +459,69 @@ export default function AttendanceClient({
           </Card>
         )}
       </div>
+
+      {/* 보충 수업 등록 다이얼로그 */}
+      <Dialog open={makeupDialogOpen} onOpenChange={setMakeupDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>보충 수업 등록</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleMakeupSave} className="space-y-4">
+            <div className="p-3 bg-amber-50 rounded-lg border border-amber-100 text-xs text-amber-700">
+              결석 학생을 위한 보충 수업을 등록합니다. 상태가 자동으로 <strong>보강</strong>으로 설정됩니다.
+            </div>
+            <div className="space-y-1.5">
+              <Label>보충 날짜 *</Label>
+              <Input
+                type="date"
+                value={makeupForm.lesson_date}
+                onChange={(e) => setMakeupForm({ ...makeupForm, lesson_date: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>시작 시간 *</Label>
+                <Input
+                  type="time"
+                  value={makeupForm.start_time}
+                  onChange={(e) => setMakeupForm({ ...makeupForm, start_time: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>종료 시간 *</Label>
+                <Input
+                  type="time"
+                  value={makeupForm.end_time}
+                  onChange={(e) => setMakeupForm({ ...makeupForm, end_time: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>수업 주제</Label>
+              <Input
+                value={makeupForm.topic}
+                onChange={(e) => setMakeupForm({ ...makeupForm, topic: e.target.value })}
+                placeholder="예: [보충] 이차방정식"
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setMakeupDialogOpen(false)}>
+                취소
+              </Button>
+              <Button
+                type="submit"
+                className="bg-amber-500 hover:bg-amber-600 text-white"
+                disabled={makeupLoading}
+              >
+                {makeupLoading ? "등록 중..." : "보충 수업 등록"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

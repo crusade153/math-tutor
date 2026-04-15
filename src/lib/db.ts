@@ -1,9 +1,4 @@
 import { neon } from "@neondatabase/serverless";
+import "@/lib/env"; // 필수 환경변수 검증
 
-const DATABASE_URL = process.env.DATABASE_URL;
-
-if (!DATABASE_URL) {
-  throw new Error("DATABASE_URL 환경변수가 설정되지 않았습니다.");
-}
-
-export const sql = neon(DATABASE_URL);
+export const sql = neon(process.env.DATABASE_URL!);

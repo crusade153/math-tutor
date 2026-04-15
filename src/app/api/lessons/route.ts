@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSessionFromRequest } from "@/lib/auth";
+import { createLessonSchema } from "@/lib/schemas";
 
 export async function GET(request: NextRequest) {
   const session = await getSessionFromRequest(request);
@@ -47,14 +48,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { class_id, lesson_date, start_time, end_time, topic, note } = body;
-
-    if (!class_id || !lesson_date || !start_time || !end_time) {
+    const parsed = createLessonSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "반, 날짜, 시작/종료 시간은 필수입니다." },
+        { error: parsed.error.errors[0].message },
         { status: 400 }
       );
     }
+    const { class_id, lesson_date, start_time, end_time, topic, note } = parsed.data;
 
     const rows = await sql`
       INSERT INTO lessons (class_id, lesson_date, start_time, end_time, topic, note)

@@ -1,12 +1,14 @@
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { formatDate } from "@/lib/utils";
+import { formatDate, currentMonth } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, BookOpen, Calendar, MessageSquare } from "lucide-react";
+import { Users, BookOpen, Calendar, MessageSquare, AlertCircle } from "lucide-react";
+import Link from "next/link";
 
 async function getStats() {
-  const [students, todayLessons, pendingConsultations, newInquiries] =
+  const month = currentMonth();
+  const [students, todayLessons, pendingConsultations, newInquiries, unpaidTuition] =
     await Promise.all([
       sql`SELECT COUNT(*)::int AS cnt FROM students WHERE deleted_at IS NULL AND is_active = true`,
       sql`
@@ -18,6 +20,12 @@ async function getStats() {
       `,
       sql`SELECT COUNT(*)::int AS cnt FROM consultations WHERE status = 'requested'`,
       sql`SELECT COUNT(*)::int AS cnt FROM inquiries WHERE status = 'new'`,
+      sql`
+        SELECT COUNT(*)::int AS cnt, COALESCE(SUM(t.amount), 0)::int AS total
+        FROM tuition t
+        JOIN students s ON s.id = t.student_id
+        WHERE t.month = ${month} AND t.is_paid = false AND s.is_active = true AND s.deleted_at IS NULL
+      `,
     ]);
 
   return {
@@ -25,6 +33,9 @@ async function getStats() {
     todayLessons,
     pendingConsultations: (pendingConsultations[0] as { cnt: number }).cnt,
     newInquiries: (newInquiries[0] as { cnt: number }).cnt,
+    unpaidCount: (unpaidTuition[0] as { cnt: number }).cnt,
+    unpaidTotal: (unpaidTuition[0] as { total: number }).total,
+    currentMonth: month,
   };
 }
 
@@ -39,6 +50,7 @@ export default async function AdminDashboard() {
       icon: Users,
       color: "text-blue-600",
       bg: "bg-blue-50",
+      href: null,
     },
     {
       title: "오늘 수업",
@@ -46,6 +58,7 @@ export default async function AdminDashboard() {
       icon: Calendar,
       color: "text-green-600",
       bg: "bg-green-50",
+      href: null,
     },
     {
       title: "면담 신청",
@@ -53,6 +66,7 @@ export default async function AdminDashboard() {
       icon: BookOpen,
       color: "text-amber-600",
       bg: "bg-amber-50",
+      href: null,
     },
     {
       title: "신규 문의",
@@ -60,6 +74,7 @@ export default async function AdminDashboard() {
       icon: MessageSquare,
       color: "text-purple-600",
       bg: "bg-purple-50",
+      href: null,
     },
   ];
 
@@ -75,7 +90,7 @@ export default async function AdminDashboard() {
       </div>
 
       {/* 통계 카드 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         {statCards.map((card) => {
           const Icon = card.icon;
           return (
@@ -95,6 +110,26 @@ export default async function AdminDashboard() {
           );
         })}
       </div>
+
+      {/* 이번 달 미납 원비 알림 */}
+      {stats.unpaidCount > 0 && (
+        <Link href="/admin/tuition?filter=unpaid">
+          <div className="flex items-center gap-3 p-4 mb-6 bg-red-50 border border-red-200 rounded-xl cursor-pointer hover:bg-red-100 transition-colors">
+            <div className="p-2 rounded-full bg-red-100">
+              <AlertCircle size={20} className="text-red-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-red-700">
+                이번 달 ({stats.currentMonth}) 미납 원비
+              </p>
+              <p className="text-xs text-red-500 mt-0.5">
+                {stats.unpaidCount}명 미납 · 합계 {stats.unpaidTotal.toLocaleString()}원
+              </p>
+            </div>
+            <span className="text-xs text-red-400">확인하기 →</span>
+          </div>
+        </Link>
+      )}
 
       {/* 오늘 수업 */}
       <Card>

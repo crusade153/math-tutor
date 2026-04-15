@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -20,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Trash2, BookOpen, Eye, EyeOff } from "lucide-react";
 
 interface Lesson {
   id: number;
@@ -36,6 +37,14 @@ interface Lesson {
 interface Class {
   id: number;
   name: string;
+}
+
+interface LessonLog {
+  id: number;
+  lesson_id: number;
+  content: string;
+  homework: string | null;
+  shared_with_parent: boolean;
 }
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -80,6 +89,10 @@ export default function LessonsClient({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Lesson | null>(null);
   const [mode, setMode] = useState<"single" | "recurring">("single");
+  const [activeTab, setActiveTab] = useState<"lesson" | "log">("lesson");
+  const [lessonLog, setLessonLog] = useState<LessonLog | null>(null);
+  const [logForm, setLogForm] = useState({ content: "", homework: "", shared_with_parent: false });
+  const [logLoading, setLogLoading] = useState(false);
 
   // 단건 폼
   const [form, setForm] = useState({
@@ -137,9 +150,10 @@ export default function LessonsClient({
     setDialogOpen(true);
   }
 
-  function openEdit(lesson: Lesson) {
+  async function openEdit(lesson: Lesson) {
     setEditing(lesson);
     setMode("single");
+    setActiveTab("lesson");
     setForm({
       class_id: lesson.class_id.toString(),
       lesson_date: lesson.lesson_date.slice(0, 10),
@@ -148,6 +162,18 @@ export default function LessonsClient({
       topic: lesson.topic ?? "",
       status: lesson.status,
     });
+    // 수업 일지 불러오기
+    const res = await fetch(`/api/lesson-logs?lessonId=${lesson.id}`);
+    if (res.ok) {
+      const json = await res.json();
+      const log = json.data as LessonLog | null;
+      setLessonLog(log);
+      setLogForm({
+        content: log?.content ?? "",
+        homework: log?.homework ?? "",
+        shared_with_parent: log?.shared_with_parent ?? false,
+      });
+    }
     setDialogOpen(true);
   }
 
@@ -251,6 +277,35 @@ export default function LessonsClient({
     setLoading(false);
   }
 
+  async function handleLogSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editing) return;
+    if (!logForm.content.trim()) { toast.error("수업 내용을 입력해주세요."); return; }
+    setLogLoading(true);
+
+    const url = lessonLog ? `/api/lesson-logs/${lessonLog.id}` : "/api/lesson-logs";
+    const method = lessonLog ? "PUT" : "POST";
+    const body = lessonLog
+      ? { content: logForm.content, homework: logForm.homework || null, shared_with_parent: logForm.shared_with_parent }
+      : { lesson_id: editing.id, content: logForm.content, homework: logForm.homework || null, shared_with_parent: logForm.shared_with_parent };
+
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      setLessonLog(json.data);
+      toast.success("수업 일지가 저장되었습니다.");
+    } else {
+      const json = await res.json();
+      toast.error(json.error ?? "저장 실패");
+    }
+    setLogLoading(false);
+  }
+
   async function refresh() {
     const res = await fetch(`/api/lessons?year=${year}&month=${parseInt(month)}`);
     if (res.ok) {
@@ -351,6 +406,79 @@ export default function LessonsClient({
             <DialogTitle>{editing ? "수업 수정" : "수업 등록"}</DialogTitle>
           </DialogHeader>
 
+          {/* 수업 수정 시: 수업 정보 / 수업 일지 탭 */}
+          {editing && (
+            <div className="flex rounded-lg border overflow-hidden mb-2">
+              <button
+                type="button"
+                className={`flex-1 py-1.5 text-sm font-medium transition-colors ${
+                  activeTab === "lesson" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-50"
+                }`}
+                onClick={() => setActiveTab("lesson")}
+              >
+                수업 정보
+              </button>
+              <button
+                type="button"
+                className={`flex-1 py-1.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                  activeTab === "log" ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-50"
+                }`}
+                onClick={() => setActiveTab("log")}
+              >
+                <BookOpen size={14} />
+                수업 일지
+                {lessonLog && <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />}
+              </button>
+            </div>
+          )}
+
+          {/* 수업 일지 탭 내용 */}
+          {editing && activeTab === "log" && (
+            <form onSubmit={handleLogSave} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>수업 내용 *</Label>
+                <Textarea
+                  value={logForm.content}
+                  onChange={(e) => setLogForm({ ...logForm, content: e.target.value })}
+                  placeholder="오늘 수업에서 다룬 내용을 적어주세요."
+                  rows={4}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>숙제</Label>
+                <Textarea
+                  value={logForm.homework}
+                  onChange={(e) => setLogForm({ ...logForm, homework: e.target.value })}
+                  placeholder="숙제 내용을 적어주세요. (선택)"
+                  rows={2}
+                />
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border">
+                <button
+                  type="button"
+                  onClick={() => setLogForm({ ...logForm, shared_with_parent: !logForm.shared_with_parent })}
+                  className={`flex items-center gap-2 text-sm font-medium transition-colors ${
+                    logForm.shared_with_parent ? "text-green-600" : "text-gray-400"
+                  }`}
+                >
+                  {logForm.shared_with_parent ? <Eye size={16} /> : <EyeOff size={16} />}
+                  {logForm.shared_with_parent ? "학부모에게 공개됨" : "학부모에게 비공개"}
+                </button>
+                <span className="text-xs text-gray-400">클릭하여 변경</span>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>닫기</Button>
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={logLoading}>
+                  {logLoading ? "저장 중..." : "일지 저장"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+
+          {/* 수업 정보 탭 or 신규 등록 */}
+          {(!editing || activeTab === "lesson") && (
+          <>
           {/* 등록 모드 탭 (신규 등록 시에만 표시) */}
           {!editing && (
             <div className="flex rounded-lg border overflow-hidden mb-2">
@@ -562,6 +690,8 @@ export default function LessonsClient({
                 </Button>
               </DialogFooter>
             </form>
+          )}
+          </>
           )}
         </DialogContent>
       </Dialog>

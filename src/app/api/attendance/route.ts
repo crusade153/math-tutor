@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSessionFromRequest } from "@/lib/auth";
+import { createAttendanceSchema } from "@/lib/schemas";
 
 export async function GET(request: NextRequest) {
   const session = await getSessionFromRequest(request);
@@ -57,12 +58,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { lesson_id, student_id, status } = body;
-
-    const ALLOWED = ["present", "absent", "late", "excused"];
-    if (!ALLOWED.includes(status)) {
-      return NextResponse.json({ error: "잘못된 상태값입니다." }, { status: 400 });
+    const parsed = createAttendanceSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.errors[0].message },
+        { status: 400 }
+      );
     }
+    const { lesson_id, student_id, status } = parsed.data;
 
     await sql`
       INSERT INTO attendance (lesson_id, student_id, status, method, checked_at)

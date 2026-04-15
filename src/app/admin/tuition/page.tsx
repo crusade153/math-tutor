@@ -16,9 +16,15 @@ async function getData(month: string) {
   return { tuition, students };
 }
 
-export default async function TuitionPage() {
+export default async function TuitionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
   const month = currentMonth();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = await getData(month) as any;
-  return <TuitionClient {...data} currentMonth={month} />;
+  const params = await searchParams;
+  const initialFilter = params.filter === "unpaid" ? "unpaid" : "all";
+  return <TuitionClient {...data} currentMonth={month} initialFilter={initialFilter} />;
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSessionFromRequest } from "@/lib/auth";
+import { createStudentSchema } from "@/lib/schemas";
 
 export async function GET(request: NextRequest) {
   const session = await getSessionFromRequest(request);
@@ -39,21 +40,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, grade, school, parent_id, pin } = body;
-
-    if (!name || !grade) {
+    const parsed = createStudentSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "이름과 학년은 필수입니다." },
+        { error: parsed.error.errors[0].message },
         { status: 400 }
       );
     }
-
-    if (pin && !/^\d{4}$/.test(pin)) {
-      return NextResponse.json(
-        { error: "PIN은 4자리 숫자여야 합니다." },
-        { status: 400 }
-      );
-    }
+    const { name, grade, school, parent_id, pin } = parsed.data;
 
     const rows = await sql`
       INSERT INTO students (name, grade, school, parent_id, pin)
