@@ -3,12 +3,25 @@ import { getSession } from "@/lib/auth";
 import { formatDate, currentMonth } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, BookOpen, Calendar, MessageSquare, AlertCircle } from "lucide-react";
+import { Users, BookOpen, Calendar, MessageSquare, AlertCircle, CalendarX } from "lucide-react";
 import Link from "next/link";
 
+async function autoCompletePassedLessons() {
+  await sql`
+    UPDATE lessons
+    SET status = 'completed'
+    WHERE status = 'scheduled'
+      AND (
+        lesson_date < CURRENT_DATE
+        OR (lesson_date = CURRENT_DATE AND end_time <= CURRENT_TIME)
+      )
+  `;
+}
+
 async function getStats() {
+  await autoCompletePassedLessons();
   const month = currentMonth();
-  const [students, todayLessons, pendingConsultations, newInquiries, unpaidTuition] =
+  const [students, todayLessons, pendingConsultations, newInquiries, unpaidTuition, pendingAbsences] =
     await Promise.all([
       sql`SELECT COUNT(*)::int AS cnt FROM students WHERE deleted_at IS NULL AND is_active = true`,
       sql`
@@ -26,6 +39,7 @@ async function getStats() {
         JOIN students s ON s.id = t.student_id
         WHERE t.month = ${month} AND t.is_paid = false AND s.is_active = true AND s.deleted_at IS NULL
       `,
+      sql`SELECT COUNT(*)::int AS cnt FROM absence_requests WHERE status = 'pending'`,
     ]);
 
   return {
@@ -36,6 +50,7 @@ async function getStats() {
     unpaidCount: (unpaidTuition[0] as { cnt: number }).cnt,
     unpaidTotal: (unpaidTuition[0] as { total: number }).total,
     currentMonth: month,
+    pendingAbsences: (pendingAbsences[0] as { cnt: number }).cnt,
   };
 }
 
@@ -76,6 +91,14 @@ export default async function AdminDashboard() {
       bg: "bg-purple-50",
       href: null,
     },
+    {
+      title: "결석 신고",
+      value: `${stats.pendingAbsences}건`,
+      icon: CalendarX,
+      color: "text-rose-600",
+      bg: "bg-rose-50",
+      href: "/admin/attendance",
+    },
   ];
 
   return (
@@ -90,23 +113,28 @@ export default async function AdminDashboard() {
       </div>
 
       {/* 통계 카드 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
         {statCards.map((card) => {
           const Icon = card.icon;
-          return (
-            <Card key={card.title}>
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500">{card.title}</p>
-                    <p className="text-2xl font-bold mt-1">{card.value}</p>
-                  </div>
-                  <div className={`p-3 rounded-full ${card.bg}`}>
-                    <Icon size={20} className={card.color} />
-                  </div>
+          const cardContent = (
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">{card.title}</p>
+                  <p className="text-2xl font-bold mt-1">{card.value}</p>
                 </div>
-              </CardContent>
-            </Card>
+                <div className={`p-3 rounded-full ${card.bg}`}>
+                  <Icon size={20} className={card.color} />
+                </div>
+              </div>
+            </CardContent>
+          );
+          return card.href ? (
+            <Link key={card.title} href={card.href}>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow">{cardContent}</Card>
+            </Link>
+          ) : (
+            <Card key={card.title}>{cardContent}</Card>
           );
         })}
       </div>

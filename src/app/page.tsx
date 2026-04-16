@@ -1,13 +1,30 @@
 import Hero from "@/components/landing/Hero";
 import WhyUs from "@/components/landing/WhyUs";
+import GallerySection from "@/components/landing/GallerySection";
 import TeacherIntro from "@/components/landing/TeacherIntro";
 import CurriculumCards from "@/components/landing/CurriculumCards";
 import LocationSection from "@/components/landing/LocationSection";
 import Testimonials from "@/components/landing/Testimonials";
 import ConsultationForm from "@/components/landing/ConsultationForm";
 import Link from "next/link";
+import { sql } from "@/lib/db";
 
-export default function LandingPage() {
+async function getGalleryImages() {
+  try {
+    const rows = await sql`
+      SELECT id, url, caption
+      FROM gallery_images
+      WHERE is_active = TRUE
+      ORDER BY display_order ASC, created_at ASC
+    `;
+    return rows as Array<{ id: number; url: string; caption: string | null }>;
+  } catch {
+    return [];
+  }
+}
+
+export default async function LandingPage() {
+  const galleryImages = await getGalleryImages();
   return (
     <div className="min-h-screen">
       {/* 헤더 네비게이션 */}
@@ -62,6 +79,7 @@ export default function LandingPage() {
 
       <Hero />
       <WhyUs />
+      <GallerySection images={galleryImages} />
       <TeacherIntro />
       <CurriculumCards />
 

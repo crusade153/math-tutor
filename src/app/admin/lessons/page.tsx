@@ -1,7 +1,21 @@
 import { sql } from "@/lib/db";
 import LessonsClient from "./LessonsClient";
 
+async function autoCompletePassedLessons() {
+  await sql`
+    UPDATE lessons
+    SET status = 'completed'
+    WHERE status = 'scheduled'
+      AND (
+        lesson_date < CURRENT_DATE
+        OR (lesson_date = CURRENT_DATE AND end_time <= CURRENT_TIME)
+      )
+  `;
+}
+
 async function getData() {
+  await autoCompletePassedLessons();
+
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");

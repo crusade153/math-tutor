@@ -28,11 +28,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import QRDisplay from "@/components/admin/QRDisplay";
 import RoomQRDisplay from "@/components/admin/RoomQRDisplay";
 import { formatDate } from "@/lib/utils";
-import { QrCode, CalendarPlus } from "lucide-react";
+import { QrCode, CalendarPlus, CalendarX, CheckCircle, XCircle } from "lucide-react";
 
 interface Lesson {
   id: number;
@@ -64,6 +65,18 @@ interface RoomVisit {
   grade: string;
   checked_in_at: string | null;
   checked_out_at: string | null;
+}
+
+interface AbsenceRequest {
+  id: number;
+  student_id: number;
+  student_name: string;
+  grade: string;
+  absence_date: string;
+  reason: string | null;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
 }
 
 const STATUS_OPTS = [
@@ -102,6 +115,9 @@ export default function AttendanceClient({
   const [loadingAttendance, setLoadingAttendance] = useState(false);
   const [showRoomQR, setShowRoomQR] = useState(false);
   const [roomVisits, setRoomVisits] = useState<RoomVisit[]>([]);
+  const [absenceRequests, setAbsenceRequests] = useState<AbsenceRequest[]>([]);
+  const [processingAbsence, setProcessingAbsence] = useState<number | null>(null);
+  const [adminNoteMap, setAdminNoteMap] = useState<Record<number, string>>({});
 
   // 보충 수업 등록 모달
   const [makeupDialogOpen, setMakeupDialogOpen] = useState(false);
@@ -120,6 +136,7 @@ export default function AttendanceClient({
 
   useEffect(() => {
     loadRoomVisits();
+    loadAbsenceRequests();
   }, []);
 
   async function loadRoomVisits() {
@@ -128,6 +145,30 @@ export default function AttendanceClient({
       const json = await res.json();
       setRoomVisits(json.data ?? []);
     }
+  }
+
+  async function loadAbsenceRequests() {
+    const res = await fetch("/api/absence-requests");
+    if (res.ok) {
+      const json = await res.json();
+      setAbsenceRequests(json.data ?? []);
+    }
+  }
+
+  async function handleAbsenceProcess(id: number, status: "confirmed" | "rejected") {
+    setProcessingAbsence(id);
+    const res = await fetch(`/api/absence-requests/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status, admin_note: adminNoteMap[id] ?? null }),
+    });
+    if (res.ok) {
+      toast.success(status === "confirmed" ? "공결 처리되었습니다." : "거절 처리되었습니다.");
+      await loadAbsenceRequests();
+    } else {
+      toast.error("처리 실패");
+    }
+    setProcessingAbsence(null);
   }
 
   async function loadAttendance(lessonId: number) {
@@ -457,6 +498,106 @@ export default function AttendanceClient({
               </TableBody>
             </Table>
           </Card>
+        )}
+      </div>
+
+      {/* 결석 사전 신고 섹션 */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-gray-700 flex items-center gap-2">
+            <CalendarX size={16} className="text-rose-500" />
+            결석 사전 신고
+            {absenceRequests.filter((r) => r.status === "pending").length > 0 && (
+              <span className="ml-1 px-2 py-0.5 text-xs font-bold bg-rose-100 text-rose-600 rounded-full">
+                {absenceRequests.filter((r) => r.status === "pending").length}건 대기
+              </span>
+            )}
+          </h2>
+          <Button variant="outline" size="sm" onClick={loadAbsenceRequests}>
+            새로고침
+          </Button>
+        </div>
+
+        {absenceRequests.length === 0 ? (
+          <Card>
+            <CardContent className="py-6 text-center text-gray-400 text-sm">
+              결석 신고가 없습니다.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {absenceRequests.map((req) => (
+              <Card key={req.id} className={req.status === "pending" ? "border-rose-200" : ""}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-sm">{req.student_name}</span>
+                        <span className="text-xs text-gray-400">{req.grade}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          req.status === "pending"
+                            ? "bg-amber-100 text-amber-700"
+                            : req.status === "confirmed"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}>
+                          {req.status === "pending" ? "대기중" : req.status === "confirmed" ? "공결처리" : "거절됨"}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-800 font-medium">
+                        {new Date(req.absence_date + "T00:00:00").toLocaleDateString("ko-KR", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                          weekday: "short",
+                        })}
+                      </p>
+                      {req.reason && (
+                        <p className="text-xs text-gray-500 mt-1">사유: {req.reason}</p>
+                      )}
+                      {req.admin_note && (
+                        <p className="text-xs text-indigo-600 mt-0.5">메모: {req.admin_note}</p>
+                      )}
+
+                      {req.status === "pending" && (
+                        <div className="mt-3 space-y-2">
+                          <Textarea
+                            placeholder="선생님 메모 (선택, 학부모에게 표시됩니다)"
+                            className="text-xs h-16 resize-none"
+                            value={adminNoteMap[req.id] ?? ""}
+                            onChange={(e) =>
+                              setAdminNoteMap((prev) => ({ ...prev, [req.id]: e.target.value }))
+                            }
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-1.5 h-8 text-xs"
+                              onClick={() => handleAbsenceProcess(req.id, "confirmed")}
+                              disabled={processingAbsence === req.id}
+                            >
+                              <CheckCircle size={13} />
+                              공결 처리
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-200 hover:bg-red-50 flex items-center gap-1.5 h-8 text-xs"
+                              onClick={() => handleAbsenceProcess(req.id, "rejected")}
+                              disabled={processingAbsence === req.id}
+                            >
+                              <XCircle size={13} />
+                              거절
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
 

@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, ClipboardCheck, MessageCircle, Bell, LogOut, MessageSquare, BookOpen } from "lucide-react";
+import { LayoutDashboard, ClipboardCheck, MessageCircle, Bell, LogOut, MessageSquare, BookOpen, CalendarX } from "lucide-react";
 import { toast } from "sonner";
 
 const navItems = [
   { href: "/parent/dashboard", icon: LayoutDashboard, label: "홈" },
   { href: "/parent/attendance", icon: ClipboardCheck, label: "출결" },
+  { href: "/parent/absence", icon: CalendarX, label: "결석신고" },
   { href: "/parent/lesson-logs", icon: BookOpen, label: "수업일지" },
   { href: "/parent/consultations", icon: MessageCircle, label: "면담" },
   { href: "/parent/notices", icon: Bell, label: "알림장" },
@@ -87,7 +88,7 @@ export default function ParentNav({ userName }: ParentNavProps) {
 
       {/* 모바일 하단 탭 네비게이션 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t md:hidden z-10 safe-area-inset-bottom">
-        <div className="grid grid-cols-7 max-w-lg mx-auto">
+        <div className="grid grid-cols-8 max-w-lg mx-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");

@@ -189,6 +189,27 @@ CREATE TABLE IF NOT EXISTS exam_details (
   UNIQUE (score_id)
 );
 
+-- 랜딩페이지 갤러리 이미지
+CREATE TABLE IF NOT EXISTS gallery_images (
+  id SERIAL PRIMARY KEY,
+  url TEXT NOT NULL,
+  caption VARCHAR(200),
+  display_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 결석 사전 신고
+CREATE TABLE IF NOT EXISTS absence_requests (
+  id SERIAL PRIMARY KEY,
+  student_id INTEGER REFERENCES students(id) NOT NULL,
+  absence_date DATE NOT NULL,
+  reason TEXT,
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'rejected')),
+  admin_note TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 인덱스
 CREATE UNIQUE INDEX IF NOT EXISTS idx_students_pin ON students(pin) WHERE pin IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_students_parent ON students(parent_id);
@@ -203,3 +224,6 @@ CREATE INDEX IF NOT EXISTS idx_tuition_student ON tuition(student_id);
 CREATE INDEX IF NOT EXISTS idx_consultations_parent ON consultations(parent_id);
 CREATE INDEX IF NOT EXISTS idx_notices_published ON notices(is_published, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_exam_details_score ON exam_details(score_id);
+CREATE INDEX IF NOT EXISTS idx_gallery_images_order ON gallery_images(display_order) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_absence_requests_student ON absence_requests(student_id);
+CREATE INDEX IF NOT EXISTS idx_absence_requests_status ON absence_requests(status, absence_date);
