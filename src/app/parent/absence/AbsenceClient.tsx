@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -15,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { CalendarX, Trash2, Plus } from "lucide-react";
+import { CalendarX, Trash2, Plus, BookOpen } from "lucide-react";
 
 interface Student {
   id: number;
@@ -23,11 +22,25 @@ interface Student {
   grade: string;
 }
 
+interface UpcomingLesson {
+  id: number;
+  lesson_date: string;
+  start_time: string;
+  end_time: string;
+  topic: string | null;
+  class_name: string;
+}
+
 interface AbsenceRequest {
   id: number;
   student_id: number;
   student_name: string;
   absence_date: string;
+  lesson_id: number | null;
+  lesson_date: string;
+  lesson_start_time: string | null;
+  lesson_end_time: string | null;
+  lesson_class_name: string | null;
   reason: string | null;
   status: string;
   admin_note: string | null;
@@ -35,40 +48,80 @@ interface AbsenceRequest {
 }
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  pending: { label: "대기중", color: "bg-amber-100 text-amber-700" },
-  confirmed: { label: "확인됨", color: "bg-green-100 text-green-700" },
-  rejected: { label: "거절됨", color: "bg-red-100 text-red-700" },
+  pending:   { label: "대기중",  color: "bg-amber-100 text-amber-700" },
+  confirmed: { label: "공결처리됨", color: "bg-green-100 text-green-700" },
+  rejected:  { label: "거절됨",  color: "bg-red-100 text-red-700" },
 };
+
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+function formatLessonDate(dateStr: string) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr + "T00:00:00");
+  if (isNaN(d.getTime())) return dateStr;
+  const mm = d.getMonth() + 1;
+  const dd = d.getDate();
+  const day = WEEKDAYS[d.getDay()];
+  return `${mm}/${dd}(${day})`;
+}
+
+function formatFullDate(dateStr: string) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr + "T00:00:00");
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  });
+}
 
 export default function AbsenceClient({
   students,
+  lessonsByStudent,
   requests: initialRequests,
 }: {
   students: Student[];
+  lessonsByStudent: Record<string, UpcomingLesson[]>;
   requests: AbsenceRequest[];
 }) {
   const [requests, setRequests] = useState<AbsenceRequest[]>(initialRequests);
   const [studentId, setStudentId] = useState<string>(students[0]?.id.toString() ?? "");
-  const [absenceDate, setAbsenceDate] = useState("");
+  const [lessonId, setLessonId] = useState<string>("");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // 오늘 이후 날짜만 선택 가능
-  const today = new Date().toISOString().slice(0, 10);
+  // 선택된 학생의 예정 수업 목록
+  const upcomingLessons: UpcomingLesson[] = useMemo(
+    () => lessonsByStudent[studentId] ?? [],
+    [lessonsByStudent, studentId]
+  );
+
+  // 학생 변경 시 수업 선택 초기화
+  function handleStudentChange(v: string) {
+    setStudentId(v);
+    setLessonId("");
+  }
+
+  const selectedLesson = upcomingLessons.find((l) => l.id.toString() === lessonId);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!studentId || !absenceDate) {
-      toast.error("학생과 날짜를 선택해주세요.");
+    if (!studentId || !lessonId) {
+      toast.error("학생과 결석할 수업을 선택해주세요.");
       return;
     }
+    if (!selectedLesson) return;
+
     setSubmitting(true);
     const res = await fetch("/api/absence-requests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         student_id: parseInt(studentId),
-        absence_date: absenceDate,
+        lesson_id: parseInt(lessonId),
+        absence_date: selectedLesson.lesson_date,
         reason: reason.trim() || null,
       }),
     });
@@ -79,10 +132,16 @@ export default function AbsenceClient({
         {
           ...json.data,
           student_name: student?.name ?? "",
+          lesson_id: parseInt(lessonId),
+          lesson_date: selectedLesson.lesson_date,
+          lesson_start_time: selectedLesson.start_time,
+          lesson_end_time: selectedLesson.end_time,
+          lesson_class_name: selectedLesson.class_name,
+          absence_date: selectedLesson.lesson_date,
         },
         ...prev,
       ]);
-      setAbsenceDate("");
+      setLessonId("");
       setReason("");
       toast.success("결석 신고가 접수되었습니다.");
     } else {
@@ -110,7 +169,7 @@ export default function AbsenceClient({
           결석 사전 신고
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-          결석 예정일을 미리 신고하면 선생님이 확인 후 공결 처리합니다.
+          결석할 수업을 선택하면 선생님이 확인 후 공결 처리합니다.
         </p>
       </div>
 
@@ -122,9 +181,11 @@ export default function AbsenceClient({
             결석 신고하기
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* 학생 선택 */}
             <div className="space-y-1.5">
               <Label>학생 *</Label>
-              <Select value={studentId} onValueChange={(v) => v !== null && setStudentId(v)}>
+              <Select value={studentId} onValueChange={(v) => v !== null && handleStudentChange(v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="학생 선택" />
                 </SelectTrigger>
@@ -138,17 +199,43 @@ export default function AbsenceClient({
               </Select>
             </div>
 
+            {/* 수업 선택 */}
             <div className="space-y-1.5">
-              <Label>결석 날짜 *</Label>
-              <Input
-                type="date"
-                min={today}
-                value={absenceDate}
-                onChange={(e) => setAbsenceDate(e.target.value)}
-                required
-              />
+              <Label>결석할 수업 *</Label>
+              {upcomingLessons.length === 0 ? (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-gray-50 text-sm text-gray-400 border">
+                  <BookOpen size={15} />
+                  예정된 수업이 없습니다.
+                </div>
+              ) : (
+                <Select value={lessonId} onValueChange={(v) => v !== null && setLessonId(v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="수업 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {upcomingLessons.map((l) => (
+                      <SelectItem key={l.id} value={l.id.toString()}>
+                        {formatLessonDate(l.lesson_date)} &nbsp;
+                        {l.start_time}~{l.end_time} &nbsp;
+                        {l.class_name}
+                        {l.topic ? ` · ${l.topic}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {/* 선택된 수업 미리보기 */}
+              {selectedLesson && (
+                <div className="mt-1.5 p-3 rounded-lg bg-indigo-50 border border-indigo-100 text-xs text-indigo-700 space-y-0.5">
+                  <p className="font-semibold">{selectedLesson.class_name}</p>
+                  <p>{formatFullDate(selectedLesson.lesson_date)} &nbsp; {selectedLesson.start_time} ~ {selectedLesson.end_time}</p>
+                  {selectedLesson.topic && <p className="text-indigo-500">주제: {selectedLesson.topic}</p>}
+                </div>
+              )}
             </div>
 
+            {/* 사유 */}
             <div className="space-y-1.5">
               <Label>사유 (선택)</Label>
               <Textarea
@@ -160,7 +247,11 @@ export default function AbsenceClient({
               />
             </div>
 
-            <Button type="submit" disabled={submitting} className="w-full">
+            <Button
+              type="submit"
+              disabled={submitting || !lessonId || upcomingLessons.length === 0}
+              className="w-full"
+            >
               {submitting ? "신고 중..." : "결석 신고"}
             </Button>
           </form>
@@ -181,6 +272,8 @@ export default function AbsenceClient({
           <div className="space-y-3">
             {requests.map((req) => {
               const statusInfo = STATUS_MAP[req.status] ?? STATUS_MAP.pending;
+              // 수업 정보가 있으면 그걸 우선, 없으면 absence_date 사용
+              const displayDate = req.lesson_date || req.absence_date;
               return (
                 <Card key={req.id}>
                   <CardContent className="p-4">
@@ -192,16 +285,20 @@ export default function AbsenceClient({
                             {statusInfo.label}
                           </Badge>
                         </div>
-                        <p className="text-sm text-gray-700">
-                          {new Date(req.absence_date + "T00:00:00").toLocaleDateString("ko-KR", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            weekday: "short",
-                          })}
+
+                        {/* 수업 정보 */}
+                        {req.lesson_class_name ? (
+                          <p className="text-sm font-medium text-gray-800">{req.lesson_class_name}</p>
+                        ) : null}
+                        <p className="text-sm text-gray-600">
+                          {formatFullDate(displayDate)}
+                          {req.lesson_start_time && req.lesson_end_time
+                            ? ` · ${req.lesson_start_time}~${req.lesson_end_time}`
+                            : ""}
                         </p>
+
                         {req.reason && (
-                          <p className="text-xs text-gray-500 mt-1">{req.reason}</p>
+                          <p className="text-xs text-gray-500 mt-1">사유: {req.reason}</p>
                         )}
                         {req.admin_note && (
                           <p className="text-xs text-indigo-600 mt-1">

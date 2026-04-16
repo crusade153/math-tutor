@@ -72,7 +72,12 @@ interface AbsenceRequest {
   student_id: number;
   student_name: string;
   grade: string;
-  absence_date: string;
+  absence_date: unknown;       // DATE → ISO string or Date object
+  lesson_id: number | null;
+  lesson_date: unknown;
+  lesson_start_time: string | null;
+  lesson_end_time: string | null;
+  lesson_class_name: string | null;
   reason: string | null;
   status: string;
   admin_note: string | null;
@@ -93,6 +98,21 @@ function statusBadge(status: string) {
       {opt?.label ?? status}
     </Badge>
   );
+}
+
+// DATE 컬럼이 ISO 문자열 or Date 객체로 올 수 있으므로 안전하게 파싱
+function safeFormatDate(raw: unknown): string {
+  if (!raw) return "";
+  const s = raw instanceof Date ? raw.toISOString() : String(raw);
+  const dateOnly = s.slice(0, 10); // "YYYY-MM-DD"
+  const d = new Date(dateOnly + "T00:00:00");
+  if (isNaN(d.getTime())) return dateOnly;
+  return d.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  });
 }
 
 export default function AttendanceClient({
@@ -544,13 +564,15 @@ export default function AttendanceClient({
                           {req.status === "pending" ? "대기중" : req.status === "confirmed" ? "공결처리" : "거절됨"}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-800 font-medium">
-                        {new Date(req.absence_date + "T00:00:00").toLocaleDateString("ko-KR", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          weekday: "short",
-                        })}
+                      {/* 수업 정보 표시 */}
+                      {req.lesson_class_name && (
+                        <p className="text-sm font-semibold text-gray-800">{req.lesson_class_name}</p>
+                      )}
+                      <p className="text-sm text-gray-700">
+                        {safeFormatDate(req.lesson_date || req.absence_date)}
+                        {req.lesson_start_time && req.lesson_end_time
+                          ? ` · ${req.lesson_start_time}~${req.lesson_end_time}`
+                          : ""}
                       </p>
                       {req.reason && (
                         <p className="text-xs text-gray-500 mt-1">사유: {req.reason}</p>

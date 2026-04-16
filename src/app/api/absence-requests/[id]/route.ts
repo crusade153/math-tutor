@@ -33,19 +33,47 @@ export async function PUT(
     WHERE id = ${parseInt(id)}
   `;
 
-  // 확인(confirmed) 처리 시 해당 날짜 수업 출결을 'excused'로 자동 처리
+  // 확인(confirmed) 처리 시 출결을 'excused'로 자동 처리
   if (status === "confirmed") {
-    const req = existing[0] as { student_id: number; absence_date: string };
-    await sql`
-      UPDATE attendance
-      SET status = 'excused'
-      WHERE student_id = ${req.student_id}
-        AND lesson_id IN (
-          SELECT id FROM lessons
-          WHERE lesson_date = ${req.absence_date}
-        )
-        AND status = 'absent'
-    `;
+    const req = existing[0] as { student_id: number; absence_date: string; lesson_id: number | null };
+
+    if (req.lesson_id) {
+      // lesson_id가 있으면 해당 수업 정확히 처리
+      await sql`
+        UPDATE attendance
+        SET status = 'excused'
+        WHERE student_id = ${req.student_id}
+          AND lesson_id = ${req.lesson_id}
+          AND status IN ('absent', 'present', 'late')
+      `;
+      // 출결 레코드가 없으면 새로 생성
+      const existing2 = await sql`
+        SELECT id FROM attendance
+        WHERE student_id = ${req.student_id} AND lesson_id = ${req.lesson_id}
+      `;
+      if (existing2.length === 0) {
+        await sql`
+          INSERT INTO attendance (lesson_id, student_id, status, method)
+          VALUES (${req.lesson_id}, ${req.student_id}, 'excused', 'manual')
+          ON CONFLICT (lesson_id, student_id) DO UPDATE SET status = 'excused'
+        `;
+      }
+    } else {
+      // lesson_id 없는 경우 날짜 기준으로 처리
+      const rawDate = req.absence_date as unknown;
+      const dateStr = rawDate instanceof Date
+        ? rawDate.toISOString().slice(0, 10)
+        : String(rawDate ?? "").slice(0, 10);
+      await sql`
+        UPDATE attendance
+        SET status = 'excused'
+        WHERE student_id = ${req.student_id}
+          AND lesson_id IN (
+            SELECT id FROM lessons WHERE lesson_date = ${dateStr}
+          )
+          AND status = 'absent'
+      `;
+    }
   }
 
   return NextResponse.json({ data: { ok: true } });
