@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, ChevronLeft, ChevronRight, Trash2, BookOpen, Eye, EyeOff } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Trash2, BookOpen, Eye, EyeOff, RefreshCw } from "lucide-react";
 
 interface Lesson {
   id: number;
@@ -126,6 +126,23 @@ export default function LessonsClient({
     return lessons.filter((l) => l.lesson_date.slice(0, 10) === dateStr);
   }
 
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function fetchLessons(y: number, m: number) {
+    try {
+      const res = await fetch(`/api/lessons?year=${y}&month=${m}`);
+      if (res.ok) {
+        const json = await res.json();
+        setLessons(json.data ?? []);
+      } else {
+        toast.error("수업 데이터를 불러오지 못했습니다.");
+        setLessons([]);
+      }
+    } catch {
+      toast.error("네트워크 오류가 발생했습니다.");
+    }
+  }
+
   async function navigate(dir: number) {
     let newMonth = parseInt(month) + dir;
     let newYear = year;
@@ -134,12 +151,14 @@ export default function LessonsClient({
     const m = String(newMonth).padStart(2, "0");
     setYear(newYear);
     setMonth(m);
+    await fetchLessons(newYear, newMonth);
+  }
 
-    const res = await fetch(`/api/lessons?year=${newYear}&month=${newMonth}`);
-    if (res.ok) {
-      const json = await res.json();
-      setLessons(json.data ?? []);
-    }
+  async function handleRefresh() {
+    setRefreshing(true);
+    await fetchLessons(year, parseInt(month));
+    setRefreshing(false);
+    toast.success("새로고침 완료");
   }
 
   function openCreate(date?: string) {
@@ -332,15 +351,25 @@ export default function LessonsClient({
       </div>
 
       {/* 월 네비게이션 */}
-      <div className="flex items-center gap-4 mb-4">
+      <div className="flex items-center gap-2 mb-4">
         <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
           <ChevronLeft size={16} />
         </Button>
-        <span className="font-semibold text-lg">
+        <span className="font-semibold text-lg min-w-[100px] text-center">
           {year}년 {parseInt(month)}월
         </span>
         <Button variant="outline" size="sm" onClick={() => navigate(1)}>
           <ChevronRight size={16} />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="ml-2 text-gray-500"
+          title="새로고침"
+        >
+          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
         </Button>
       </div>
 

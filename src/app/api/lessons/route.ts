@@ -14,8 +14,11 @@ export async function GET(request: NextRequest) {
   const year = searchParams.get("year") ?? new Date().getFullYear().toString();
   const month = searchParams.get("month") ?? String(new Date().getMonth() + 1).padStart(2, "0");
 
-  const startDate = `${year}-${month.padStart(2, "0")}-01`;
-  const endDate = `${year}-${month.padStart(2, "0")}-31`;
+  const paddedMonth = month.padStart(2, "0");
+  const startDate = `${year}-${paddedMonth}-01`;
+  // 해당 월의 실제 마지막 날 계산 (28/29/30/31일 모두 대응)
+  const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+  const endDate = `${year}-${paddedMonth}-${String(lastDay).padStart(2, "0")}`;
 
   let rows;
   if (classId) {
