@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import ParentNav from "@/components/parent/ParentNav";
+import NotificationBell from "@/components/notifications/NotificationBell";
+import EnableNotificationsPrompt from "@/components/notifications/EnableNotificationsPrompt";
+import UnreadNoticesToast from "@/components/notifications/UnreadNoticesToast";
 
 export default async function ParentLayout({
   children,
@@ -24,7 +27,10 @@ export default async function ParentLayout({
             <span className="text-lg">📚</span>
             <span className="font-bold text-indigo-700">수학 공부방</span>
           </div>
-          <span className="text-sm text-gray-500">{session.name} 학부모님</span>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <span className="text-sm text-gray-500">{session.name} 학부모님</span>
+          </div>
         </header>
 
         {/* 페이지 콘텐츠 */}
@@ -32,6 +38,8 @@ export default async function ParentLayout({
           {children}
         </main>
       </div>
+      <EnableNotificationsPrompt />
+      <UnreadNoticesToast noticesUrl="/parent/notices" />
     </div>
   );
 }

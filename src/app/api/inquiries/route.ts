@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSessionFromRequest } from "@/lib/auth";
+import { notifyAdmins } from "@/lib/notifications";
 
 export async function GET(request: NextRequest) {
   const session = await getSessionFromRequest(request);
@@ -32,6 +33,18 @@ export async function POST(request: NextRequest) {
       INSERT INTO inquiries (name, phone, grade, message)
       VALUES (${name}, ${phone}, ${grade ?? null}, ${message ?? null})
     `;
+
+    // 관리자에게 푸시 + 앱 내 알림
+    try {
+      await notifyAdmins({
+        type: "inquiry",
+        title: "새 상담 문의",
+        body: `${name}(${phone})${grade ? ` · ${grade}` : ""} 님의 신규 문의가 도착했습니다.`,
+        link: "/admin/inquiries",
+      });
+    } catch (err) {
+      console.error("[inquiries] notify failed:", err);
+    }
 
     return NextResponse.json(
       { data: { ok: true } },

@@ -23,6 +23,13 @@ export const createTuitionSchema = z.object({
   note: z.string().max(500).optional().nullable(),
 });
 
+// 원비 수정 — 모든 필드 optional, 보낸 것만 갱신
+export const updateTuitionSchema = z.object({
+  amount: z.number().int().positive("금액은 0보다 커야 합니다.").optional(),
+  is_paid: z.boolean().optional(),
+  note: z.string().max(500).optional().nullable(),
+});
+
 // 수업 생성
 export const createLessonSchema = z.object({
   class_id: z.number().int().positive("반 ID가 올바르지 않습니다."),

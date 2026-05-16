@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSessionFromRequest } from "@/lib/auth";
+import { notifyAdmins } from "@/lib/notifications";
 
 export async function GET(request: NextRequest) {
   const session = await getSessionFromRequest(request);
@@ -75,6 +76,24 @@ export async function POST(request: NextRequest) {
 
     // 슬롯 비활성화
     await sql`UPDATE consultation_slots SET is_available = false WHERE id = ${slot_id}`;
+
+    // 관리자에게 푸시 + 앱 내 알림
+    try {
+      const s = slot[0] as { slot_date: unknown; start_time: unknown };
+      const slotDate = s.slot_date instanceof Date
+        ? s.slot_date.toISOString().slice(0, 10)
+        : String(s.slot_date ?? "").slice(0, 10);
+      const slotTime = String(s.start_time ?? "").slice(0, 5);
+      await notifyAdmins({
+        type: "consultation",
+        title: "새 면담 예약",
+        body: `${session.name} 학부모님이 ${slotDate} ${slotTime} 면담을 신청했습니다.`,
+        link: "/admin/consultations",
+        meta: { consultation_id: (rows[0] as { id: number }).id, slot_id },
+      });
+    } catch (err) {
+      console.error("[consultations] notify failed:", err);
+    }
 
     return NextResponse.json({ data: rows[0] }, { status: 201 });
   } catch (err) {

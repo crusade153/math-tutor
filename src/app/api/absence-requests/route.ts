@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSessionFromRequest } from "@/lib/auth";
+import { notifyAdmins } from "@/lib/notifications";
 
 export async function GET(request: NextRequest) {
   const session = await getSessionFromRequest(request);
@@ -69,12 +70,13 @@ export async function POST(request: NextRequest) {
 
   // 본인 자녀 확인
   const check = await sql`
-    SELECT id FROM students
+    SELECT id, name FROM students
     WHERE id = ${parseInt(student_id)} AND parent_id = ${session.userId} AND deleted_at IS NULL
   `;
   if (check.length === 0) {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
+  const studentName = (check[0] as { name: string }).name;
 
   // lesson_id로 absence_date 확정
   let finalDate = absence_date;
@@ -108,5 +110,19 @@ export async function POST(request: NextRequest) {
     )
     RETURNING *
   `;
+
+  // 관리자에게 푸시 + 앱 내 알림 (실패해도 응답엔 영향 없음)
+  try {
+    await notifyAdmins({
+      type: "absence_request",
+      title: "새 결석 신고",
+      body: `${studentName} 학생의 ${finalDate} 결석이 신고되었습니다.`,
+      link: "/admin/dashboard",
+      meta: { absence_request_id: (rows[0] as { id: number }).id, student_id: parseInt(student_id) },
+    });
+  } catch (err) {
+    console.error("[absence-requests] notify failed:", err);
+  }
+
   return NextResponse.json({ data: rows[0] }, { status: 201 });
 }

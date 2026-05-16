@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, ClipboardCheck, MessageCircle, Bell, LogOut, MessageSquare, BookOpen, CalendarX } from "lucide-react";
 import { toast } from "sonner";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 const navItems = [
   { href: "/parent/dashboard", icon: LayoutDashboard, label: "홈" },
@@ -36,12 +37,15 @@ export default function ParentNav({ userName }: ParentNavProps) {
       <aside className="hidden md:flex w-56 min-h-screen bg-white border-r flex-col sticky top-0 h-screen">
         {/* 로고 */}
         <div className="p-5 border-b">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">📚</span>
-            <div>
-              <span className="font-bold text-indigo-700 text-sm block">수학 공부방</span>
-              <span className="text-xs text-gray-400">학부모 페이지</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">📚</span>
+              <div>
+                <span className="font-bold text-indigo-700 text-sm block">수학 공부방</span>
+                <span className="text-xs text-gray-400">학부모 페이지</span>
+              </div>
             </div>
+            <NotificationBell />
           </div>
           {userName && (
             <div className="mt-3 px-3 py-2 rounded-xl bg-indigo-50 text-xs text-indigo-700 font-medium">

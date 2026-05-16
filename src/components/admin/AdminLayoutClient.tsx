@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AdminSidebar from "./Sidebar";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import { Menu } from "lucide-react";
 
 export default function AdminLayoutClient({
@@ -24,10 +25,11 @@ export default function AdminLayoutClient({
           >
             <Menu size={22} />
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1">
             <span className="text-lg">📚</span>
             <span className="font-bold text-indigo-700">수학 공부방</span>
           </div>
+          <NotificationBell />
         </header>
 
         {/* 메인 콘텐츠 */}

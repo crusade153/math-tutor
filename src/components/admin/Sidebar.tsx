@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import {
   LayoutDashboard,
   Users,
@@ -78,13 +79,19 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
               <span className="text-xs text-gray-400">선생님 관리 페이지</span>
             </div>
           </Link>
-          {/* 모바일 닫기 버튼 */}
-          <button
-            onClick={onClose}
-            className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-1">
+            {/* 데스크탑 종 아이콘 */}
+            <div className="hidden lg:block">
+              <NotificationBell />
+            </div>
+            {/* 모바일 닫기 버튼 */}
+            <button
+              onClick={onClose}
+              className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* 네비게이션 */}

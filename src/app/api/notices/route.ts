@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSessionFromRequest } from "@/lib/auth";
+import { notifyUser } from "@/lib/notifications";
 
 export async function GET(request: NextRequest) {
   const session = await getSessionFromRequest(request);
@@ -60,18 +61,62 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "제목과 내용을 입력해주세요." }, { status: 400 });
     }
 
+    const noticeTarget = target ?? "all";
+    const noticeTargetId = targetId ?? null;
+
     const rows = await sql`
       INSERT INTO notices (title, content, target, target_id, is_published, published_at)
       VALUES (
         ${title},
         ${content},
-        ${target ?? "all"},
-        ${targetId ?? null},
+        ${noticeTarget},
+        ${noticeTargetId},
         ${isPublished ?? false},
         ${isPublished ? new Date().toISOString() : null}
       )
       RETURNING *
     `;
+
+    // 발행 상태일 때만 대상 학부모들에게 알림
+    if (isPublished) {
+      try {
+        const parents = (await sql`
+          SELECT DISTINCT u.id
+          FROM users u
+          WHERE u.role = 'parent'
+            AND u.is_active = TRUE
+            AND u.deleted_at IS NULL
+            AND CASE ${noticeTarget}
+              WHEN 'all' THEN TRUE
+              WHEN 'individual' THEN u.id IN (
+                SELECT parent_id FROM students
+                WHERE id = ${noticeTargetId ?? 0} AND parent_id IS NOT NULL
+              )
+              WHEN 'class' THEN u.id IN (
+                SELECT s.parent_id FROM class_students cs
+                JOIN students s ON s.id = cs.student_id
+                WHERE cs.class_id = ${noticeTargetId ?? 0} AND s.parent_id IS NOT NULL
+              )
+              ELSE FALSE
+            END
+        `) as unknown as Array<{ id: number }>;
+
+        const noticeId = (rows[0] as { id: number }).id;
+        await Promise.all(
+          parents.map((p) =>
+            notifyUser(p.id, {
+              type: "notice",
+              title: "새 공지사항",
+              body: title,
+              link: "/parent/notices",
+              meta: { notice_id: noticeId },
+            })
+          )
+        );
+      } catch (err) {
+        console.error("[notices] notify failed:", err);
+      }
+    }
 
     return NextResponse.json({ data: rows[0] }, { status: 201 });
   } catch (err) {
