@@ -122,8 +122,13 @@ export async function middleware(request: NextRequest) {
   }
 
   // 사용자 정보를 헤더에 주입 (API Route에서 재사용)
+  // 한글 등 non-ASCII가 들어가면 HTTP 헤더의 ByteString 규격을 위반하므로 URL 인코딩.
+  // 읽는 쪽에서는 decodeURIComponent + JSON.parse 로 복원.
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-user-payload", JSON.stringify(session));
+  requestHeaders.set(
+    "x-user-payload",
+    encodeURIComponent(JSON.stringify(session))
+  );
 
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
